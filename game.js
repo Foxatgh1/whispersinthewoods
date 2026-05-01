@@ -2857,51 +2857,6 @@ const ENCOUNTERS = {
     ],
     4: [
         {
-            id: 'bare',
-            title: 'Bare Earth',
-            description: 'Nothing grows here. The ground is too dark, too still. You feel, with complete certainty, that you have walked this exact path before — many times.',
-            choices: [
-                {
-                    text: 'Press on.',
-                    check: null,
-                    success: { text: 'You keep moving. There is nothing else to do.', effects: { peaceOfMind: -1 } },
-                    failure: null
-                }
-            ]
-        },
-        {
-            id: 'nothing',
-            title: 'Nothing',
-            description: 'There is nothing here. That should be a relief. It is not.',
-            choices: [
-                {
-                    text: 'Continue.',
-                    check: null,
-                    success: { text: 'You continue.', effects: { insanity: 1 } },
-                    failure: null
-                }
-            ]
-        },
-        {
-            id: 'old_camp',
-            title: 'An Old Campsite',
-            description: 'The ashes in the fire pit are cold. Very cold. But someone left a jacket hanging from a branch — and it is still warm.',
-            choices: [
-                {
-                    text: 'Take the jacket.',
-                    check: null,
-                    success: { text: 'It fits. It smells like nothing. You feel slightly less exposed.', effects: { health: 1 } },
-                    failure: null
-                },
-                {
-                    text: 'Leave it.',
-                    check: null,
-                    success: { text: 'You leave it. Whoever left it here may still need it.', effects: { knowledge: 1 } },
-                    failure: null
-                }
-            ]
-        },
-        {
             id: 'third_party',
             title: 'Something has overtaken you.',
             description: "The sounds of the forest dull, the sharp scent of molded tobacco overwhelms you, and you are struck with an awful feeling of horror. Looming among the trees, directly in front of you, is a massive shrouded figure. Dirty rags and fibrous cloth cover every inch of it, none of them quite the same color against the moonlight. No eyes, orifices, or appendages obviously stick out from it save for a number of…legs? Despite these disadvantages, it is moving with surprising deftness and ease, churning up the mud beneath it. What's most peculiar of all is the fact that its form seems to be convulsing, shifting as your eyes attempt to track it. It starts to approach you.",
