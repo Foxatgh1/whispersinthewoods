@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whispers in the Woods</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- SVG filter for rough ink border effect -->
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <filter id="rough-ink" x="-5%" y="-5%" width="110%" height="110%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.065" numOctaves="4" seed="8" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5"
+                                   xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+        </defs>
+    </svg>
+    <div id="game-container">
+
+        <!-- LEFT PANEL: Logo, Stats, Attributes, Items -->
+        <div id="left-panel">
+
+            <div id="logo-area">
+                <img id="game-logo" src="logo.png" alt="Whispers in the Woods"
+                     onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block'">
+                <div id="logo-fallback">Whispers in the Woods</div>
+            </div>
+
+            <div id="stats-section">
+                <div class="stat-block">
+                    <div class="stat-name">Health</div>
+                    <div class="stat-box" id="health-value">10</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-name">Peace of Mind</div>
+                    <div class="stat-box" id="pom-value">10</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-name">Knowledge</div>
+                    <div class="stat-box" id="knowledge-value">0</div>
+                </div>
+
+            </div>
+
+            <div class="inventory-section">
+                <div class="section-label">Attributes</div>
+                <div class="inventory-box" id="attributes-box"></div>
+            </div>
+
+            <div class="inventory-section">
+                <div class="section-label">Items</div>
+                <div class="inventory-box" id="items-box"></div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT PANEL: Board + Right Column -->
+        <div id="right-panel">
+
+            <div id="board-area">
+                <div id="leaf-display">
+                    <img class="leaf-img hidden" id="leaf-0" src="watercolorleaf.png" alt="leaf">
+                    <img class="leaf-img hidden" id="leaf-1" src="watercolorleaf.png" alt="leaf">
+                    <img class="leaf-img hidden" id="leaf-2" src="watercolorleaf.png" alt="leaf">
+                </div>
+                <svg id="board" viewBox="-210 -230 420 460" xmlns="http://www.w3.org/2000/svg">
+                    <g id="hex-layer"></g>
+                    <g id="token-layer"></g>
+                    <image id="player-token-img" href="accountantglasses.png"
+                           x="-52" y="-36" width="104" height="72"
+                           pointer-events="none"/>
+                </svg>
+                <div id="escape-container" class="hidden">
+                    <button id="escape-btn" onclick="attemptEscape()">→ Escape the Woods</button>
+                </div>
+                <button id="power-tab" onclick="togglePowerCards()">
+                    ✦ Power Cards &nbsp;<span id="power-card-count">0</span>
+                </button>
+                <div id="power-cards-panel" class="hidden">
+                    <div id="power-cards-grid"></div>
+                    <div id="power-cards-empty" class="hidden">No cards in hand.</div>
+                </div>
+            </div>
+
+            <div id="right-column">
+
+                <div id="characteristics-section">
+                    <div class="section-label">Characteristics</div>
+                    <div class="char-row">
+                        <span class="char-name">Visibility</span>
+                        <span class="char-value" id="visibility-value">1.0</span>
+                    </div>
+                    <div class="char-row">
+                        <span class="char-name">Strength</span>
+                        <span class="char-value" id="strength-value">1.0</span>
+                    </div>
+                    <div class="char-row">
+                        <span class="char-name">Speed</span>
+                        <span class="char-value" id="speed-value">1.0</span>
+                    </div>
+                </div>
+
+                <div id="encounter-panel">
+                    <div id="ep-badge"></div>
+                    <div id="ep-title"></div>
+                    <div id="ep-description"></div>
+                    <div id="ep-choices"></div>
+                    <div id="ep-result" class="hidden">
+                        <div id="ep-roll"></div>
+                        <div id="ep-result-text"></div>
+                        <button id="ep-continue" onclick="continueAfterEncounter()">Continue</button>
+                    </div>
+                    <div id="ep-idle"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Dev Popup -->
+    <div id="dev-popup" class="hidden">
+        <div id="dev-popup-inner">
+            <div id="dev-popup-label">Test Encounter <span id="dev-close" onclick="toggleDevPopup()">✕</span></div>
+            <select id="dev-encounter-select"></select>
+            <button id="dev-trigger-btn" onclick="devTriggerEncounter()">Trigger</button>
+            <hr style="border:none;border-top:1px dashed #bbb;margin:4px 0">
+            <div id="dev-popup-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#555;">Give Power Card</div>
+            <select id="dev-card-select"></select>
+            <button onclick="devGivePowerCard()">Give</button>
+            <hr style="border:none;border-top:1px dashed #bbb;margin:4px 0">
+            <div id="dev-popup-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#555;">Give Item</div>
+            <select id="dev-item-select"></select>
+            <button onclick="devGiveItem()">Give</button>
+            <hr style="border:none;border-top:1px dashed #bbb;margin:4px 0">
+            <div id="dev-popup-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#555;">Give Attribute</div>
+            <select id="dev-attr-select"></select>
+            <button onclick="devGiveAttribute()">Give</button>
+        </div>
+    </div>
+
+    <!-- A Moment of Clarity Modal -->
+    <div id="clarity-modal" class="hidden">
+        <div id="clarity-inner">
+            <div id="clarity-header">
+                <span>A Moment of Clarity</span>
+                <span id="clarity-picks-remaining"></span>
+                <span id="clarity-close" onclick="closeClarityModal()">✕</span>
+            </div>
+            <div id="clarity-grid"></div>
+        </div>
+    </div>
+
+    <!-- Card feedback bar -->
+    <div id="card-feedback"></div>
+
+    <!-- End Screen -->
+    <div id="end-screen" class="hidden">
+        <h2 id="end-title"></h2>
+        <p id="end-message"></p>
+        <button id="restart-btn" onclick="initGame()">Begin Again</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
