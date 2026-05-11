@@ -1096,11 +1096,11 @@ body.level4-invert #encounter-panel::before {
 #end-screen {
     position: fixed;
     inset: 0;
-    background: rgba(255, 255, 255, 0.97);
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 200;
+    z-index: 350;
     flex-direction: column;
     gap: 22px;
     transition: opacity 1.2s ease;

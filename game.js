@@ -2857,6 +2857,12 @@ const ENCOUNTERS = {
     ],
     4: [
         {
+            id: 'face_of_stone',
+            title: 'The Face of Stone',
+            description: '',
+            choices: []
+        },
+        {
             id: 'third_party',
             title: 'Something has overtaken you.',
             description: "The sounds of the forest dull, the sharp scent of molded tobacco overwhelms you, and you are struck with an awful feeling of horror. Looming among the trees, directly in front of you, is a massive shrouded figure. Dirty rags and fibrous cloth cover every inch of it, none of them quite the same color against the moonlight. No eyes, orifices, or appendages obviously stick out from it save for a number of…legs? Despite these disadvantages, it is moving with surprising deftness and ease, churning up the mud beneath it. What's most peculiar of all is the fact that its form seems to be convulsing, shifting as your eyes attempt to track it. It starts to approach you.",
@@ -3085,7 +3091,8 @@ function newGameState() {
         thirdPartyInjured:   0,    // times the Third Party has been injured this encounter
         thirdPartyPlacated:  0,    // times the Third Party has been placated this encounter
         thirdPartyFedIt:     false, // Feed It can only be used once per encounter
-        thirdPartyTriggered: false  // prevents stalked-path from firing more than once
+        thirdPartyTriggered: false, // prevents stalked-path from firing more than once
+        fosHelpedEscape:     false  // Face of Stone guided the player home
     };
 }
 
@@ -3138,6 +3145,8 @@ function initGame() {
     document.getElementById('escape-container').classList.add('hidden');
     const existingOverlay = document.getElementById('tp-word-overlay');
     if (existingOverlay) existingOverlay.remove();
+    const existingFosOverlay = document.getElementById('fos-overlay');
+    if (existingFosOverlay) existingFosOverlay.remove();
 
     renderBoard();
 }
@@ -3386,15 +3395,15 @@ function onHexClick(q, r) {
 // ENCOUNTER SYSTEM
 // ============================================================
 function triggerEncounter(hex) {
-    if (hex.currentLevel === 4) {
-        document.body.classList.add('level4-invert');
-    }
-
     const encounter = G.pendingLeaf
         ? (hex.currentLevel === 1 ? LEAF_ENCOUNTER : LEAF_ENCOUNTER_DEFAULT)
         : hex.encounters[hex.currentLevel];
 
     G.pendingEncounter = { encounter, hex };
+
+    if (hex.currentLevel === 4 && encounter.id !== 'face_of_stone') {
+        document.body.classList.add('level4-invert');
+    }
 
     // No-item fallback: if the encounter requires an item the player lacks, show alternate description and auto-continue
     if (encounter.noItemFallback && !G.player.items.includes(encounter.noItemFallback.item)) {
@@ -3413,6 +3422,10 @@ function triggerEncounter(hex) {
     // Encounters with custom intros always bypass the normal flow
     if (encounter.id === 'third_party') {
         playThirdPartyIntro(encounter);
+        return;
+    }
+    if (encounter.id === 'face_of_stone') {
+        playFaceOfStoneIntro();
         return;
     }
 
@@ -3610,6 +3623,974 @@ function playThirdPartyIntro(enc) {
 
     // Start after inversion settles
     setTimeout(showNext, 800);
+}
+
+// ============================================================
+// FACE OF STONE ENCOUNTER
+// ============================================================
+
+function playFaceOfStoneIntro() {
+    // Create full-screen white overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'fos-overlay';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; z-index: 300;
+        background: #fff; opacity: 0;
+        display: flex; align-items: center; justify-content: center;
+        transition: opacity 1.4s ease;
+        overflow: hidden;
+    `;
+
+    // Image element, starts invisible
+    const img = document.createElement('img');
+    img.src = 'faceofstone.png';
+    img.style.cssText = `
+        max-width: 480px; max-height: 480px;
+        opacity: 0; transition: opacity 2s ease;
+        mix-blend-mode: multiply;
+        position: relative; z-index: 1;
+    `;
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+
+    // Fade overlay to white, then image in, then start words
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        setTimeout(() => {
+            img.style.opacity = '1';
+            setTimeout(() => startFosWords(overlay, img), 2200);
+        }, 1600);
+    }));
+}
+
+function makeFosPanel(overlay) {
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        position: absolute;
+        left: 22%;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 26%;
+        z-index: 4;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+    `;
+    overlay.appendChild(panel);
+    return panel;
+}
+
+function fosFadeIn(panel) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        panel.style.opacity = '1';
+    }));
+}
+
+function fosShowPanel(panel, questionText, choices) {
+    panel.style.opacity = '0';
+    panel.innerHTML = '';
+
+    const q = document.createElement('div');
+    q.textContent = questionText;
+    q.style.cssText = `
+        font-family: var(--font);
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #222;
+        margin-bottom: 18px;
+    `;
+    panel.appendChild(q);
+
+    choices.forEach(({ label, onClick }) => {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.className = 'choice-btn';
+        btn.style.cssText = 'display: block; width: 100%; margin-bottom: 8px;';
+        btn.addEventListener('click', () => {
+            panel.querySelectorAll('button').forEach(b => b.disabled = true);
+            onClick(panel);
+        });
+        panel.appendChild(btn);
+    });
+
+    fosFadeIn(panel);
+}
+
+function fosSwapToResponse(panel, responseText, thenFn) {
+    panel.style.opacity = '0';
+    setTimeout(() => {
+        panel.innerHTML = '';
+        const p = document.createElement('div');
+        p.textContent = responseText;
+        p.style.cssText = `
+            font-family: var(--font);
+            font-size: 0.95rem;
+            color: #333;
+            font-style: italic;
+            line-height: 1.5;
+        `;
+        panel.appendChild(p);
+        fosFadeIn(panel);
+        // Hang for 4s, then fade out at the same rate, then call thenFn
+        setTimeout(() => {
+            panel.style.opacity = '0';
+            setTimeout(thenFn, 600);
+        }, 4000);
+    }, 700);
+}
+
+function fosGrantHomeEscape() {
+    fosSwapToResponse(
+        document.querySelector('#fos-overlay > div[style*="z-index: 4"]'),
+        'I will help you.',
+        () => {
+            // Fade out the overlay, restore the normal game UI
+            const overlay = document.getElementById('fos-overlay');
+            if (overlay) {
+                overlay.style.transition = 'opacity 1.2s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 1300);
+            }
+            // Grant 3 leaf tokens and allow escape
+            G.player.leafTokens = 3;
+            G.fosHelpedEscape   = true;
+            G.canEscape         = true;
+            G.phase             = 'move';
+            G.pendingEncounter  = null;
+            updateLeafDisplay();
+            updateStats();
+            renderBoard();
+        }
+    );
+}
+
+// Placeholder hooks — wired when Q2 "Your knowledge." and "Your power." are built
+function showFosKnowledge(panel) { /* TBD */ }
+function showFosPower(panel)     { /* TBD */ }
+
+function showFosPeace(panel) {
+    fosSwapToResponse(panel, 'I think I know what that is. I will try to give it to you.', () => {
+        const overlay = document.getElementById('fos-overlay');
+        // Fade out boulder and panel
+        const img = overlay ? overlay.querySelector('img') : null;
+        if (img) { img.style.transition = 'opacity 1s ease'; img.style.opacity = '0'; }
+        panel.style.transition = 'opacity 1s ease';
+        panel.style.opacity = '0';
+
+        setTimeout(() => {
+            if (panel.parentNode) panel.remove();
+
+            // First passage
+            const text1 = document.createElement('div');
+            text1.textContent = 'The boulder lifts itself slightly out of the air and settles back down again. As it does so, you feel yourself grow lighter, happier, freer...You turn your face up toward the Moon and stare at the old man winking down at you. It grows larger and larger until it feels like you are upon it. Your face settles on the soft moon dust glittering in the night sky and you fall asleep.';
+            text1.style.cssText = `
+                position: absolute;
+                top: 50%; left: 50%;
+                transform: translate(-50%, -50%);
+                width: 46%;
+                text-align: center;
+                font-family: var(--font);
+                font-size: 1rem;
+                color: #333;
+                line-height: 1.8;
+                opacity: 0;
+                transition: opacity 1.5s ease;
+            `;
+            overlay.appendChild(text1);
+            fosFadeIn(text1);
+
+            // Hang 6s, fade out, then show second line
+            setTimeout(() => {
+                text1.style.opacity = '0';
+                setTimeout(() => {
+                    text1.remove();
+                    const text2 = document.createElement('div');
+                    text2.textContent = 'You are forever at peace.';
+                    text2.style.cssText = `
+                        position: absolute;
+                        top: 50%; left: 50%;
+                        transform: translate(-50%, -50%);
+                        text-align: center;
+                        font-family: var(--font);
+                        font-size: 1.2rem;
+                        color: #333;
+                        opacity: 0;
+                        transition: opacity 1.5s ease;
+                    `;
+                    overlay.appendChild(text2);
+                    fosFadeIn(text2);
+
+                    // Hang 4s, fade out, then trigger end screen
+                    setTimeout(() => {
+                        text2.style.opacity = '0';
+                        setTimeout(() => {
+                            // End screen (z-index 350) fades in above the overlay,
+                            // so the user sees the text appear over white — no board flash.
+                            endGame(false, 'You are at rest.', 'Freed.');
+                            setTimeout(() => overlay.remove(), 1400);
+                        }, 1600);
+                    }, 4000);
+                }, 1600);
+            }, 10000);
+        }, 1100);
+    });
+}
+
+function showFosCloseOverlay() {
+    const overlay = document.getElementById('fos-overlay');
+    if (overlay) {
+        overlay.style.transition = 'opacity 1.2s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 1300);
+    }
+    G.phase            = 'move';
+    G.pendingEncounter = null;
+    updateStats();
+    renderBoard();
+}
+
+function showFosGiveRhodium(panel) {
+    fosSwapToResponse(panel, 'Value? I will give you value.', () => {
+        G.player.items.push('150 Pound Block of Rhodium');
+        G.player.speed    = Math.max(0, G.player.speed    - 0.5);
+        G.player.strength = Math.max(0, G.player.strength - 0.5);
+        showFosCloseOverlay();
+    });
+}
+
+function showFosMoney(panel) {
+    fosSwapToResponse(panel, 'I do not know what that is.', () => {
+        fosShowPanel(panel, '', [
+            { label: 'It is something of value.',    onClick: () => showFosGiveRhodium(panel) },
+            { label: 'I will choose something else.', onClick: () => fosSwapToResponse(panel, 'Ok.', () => showFosQ4_noMoney(panel)) },
+        ]);
+    });
+}
+
+function showFosQ4_noMoney(panel) {
+    fosShowPanel(panel, 'Is there something else you want?', [
+        { label: 'Your knowledge.', onClick: () => showFosKnowledge(panel) },
+        { label: 'Your power.',     onClick: () => showFosPower(panel) },
+        { label: 'Peace.',          onClick: () => showFosPeace(panel) },
+        { label: 'No.',             onClick: () => fosSwapToResponse(panel, 'Then depart. I see no reason for you to remain.', () => showFosCloseOverlay()) },
+    ]);
+}
+
+function showFosQ4_somethingElse(panel) {
+    fosShowPanel(panel, 'Is there something else you want?', [
+        { label: 'Your knowledge.', onClick: () => showFosKnowledge(panel) },
+        { label: 'Your power.',     onClick: () => showFosPower(panel) },
+        { label: 'Money.',          onClick: () => showFosMoney(panel) },
+        { label: 'Peace.',          onClick: () => showFosPeace(panel) },
+        { label: 'No.',             onClick: () => fosSwapToResponse(panel, 'Then depart. I see no reason for you to remain.', () => showFosCloseOverlay()) },
+    ]);
+}
+
+function showFosMoonHexBox() {
+    const fosOverlay = document.getElementById('fos-overlay');
+    if (!fosOverlay) return;
+
+    const BOX_SIZE = 460;
+    const CENTER   = BOX_SIZE / 2;
+    const HEX_SIZE = 52;
+    const SQRT3    = Math.sqrt(3);
+
+    // Pointy-top axial → pixel (world coordinates)
+    function hexToPixel(q, r) {
+        return {
+            x: HEX_SIZE * SQRT3 * (q + r / 2),
+            y: HEX_SIZE * 1.5 * r
+        };
+    }
+
+    // Pointy-top hex path centered at screen (cx, cy)
+    function hexPath(cx, cy) {
+        const pts = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = Math.PI / 3 * i - Math.PI / 6;
+            pts.push(`${cx + HEX_SIZE * Math.cos(angle)},${cy + HEX_SIZE * Math.sin(angle)}`);
+        }
+        return `M${pts.join('L')}Z`;
+    }
+
+    function hexDist(q1, r1, q2, r2) {
+        return Math.max(Math.abs(q1-q2), Math.abs(r1-r2), Math.abs((-q1-r1)-(-q2-r2)));
+    }
+
+    let playerQ = 0, playerR = 0;
+    let moveCount   = 0;
+    let textShowing = false;
+
+    const MILESTONE_TEXTS = {
+        5:  "There are no woods anymore. No plant life. No animals. No people. Nothing to scare you anymore.",
+        10: "It's quiet out here. Sound is almost swallowed up in the vacuum of black.",
+        15: "You think of your family, your friends. Its unlikely that you will ever see them again.",
+        20: "Every step you take carries you on a long trek toward nowhere.",
+        25: "The landscape is unfamiliar and unchanging. You are truly lost.",
+        30: "It's been some time. Your stomach is grumbling and a hoarse thirst cakes your throat.",
+        35: "Your senses are deprived in this pallid light. The bleakness of the landscape mixes with the lifeless sky to form a Rothko-esque vision of grey and black.",
+        40: "Not even the Face can find you now. You are beyond sight, beyond mind.",
+        45: "When will your time come?",
+        50: "Father! Mother! Where are you? Was the world always so black? The land gleams with light, yet there is no sun!",
+        55: "How long have you been walking for? Days? Weeks? Years? Perhaps only hours.",
+        60: "Your tongue shrivels and dries like a spoilt worm. You stumble along.",
+        65: "So hungry. So thirsty.",
+        70: "Have mercy upon me. Let me be.",
+        75: "One of your legs gives out and you fall to the ground, unable to rise again."
+    };
+
+    // Containing box
+    const box = document.createElement('div');
+    box.style.cssText = `
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: ${BOX_SIZE}px; height: ${BOX_SIZE}px;
+        background: #fff;
+        border: 2px solid #000;
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 1s ease;
+    `;
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width',  BOX_SIZE);
+    svg.setAttribute('height', BOX_SIZE);
+    svg.style.display = 'block';
+
+    const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    svg.appendChild(gridGroup);
+
+    // Token — always fixed at center of box
+    const TOKEN_W = 100, TOKEN_H = 70;
+    const tokenImg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    tokenImg.setAttribute('href', 'accountantglasses.png');
+    tokenImg.setAttribute('width',  TOKEN_W);
+    tokenImg.setAttribute('height', TOKEN_H);
+    tokenImg.setAttribute('x', CENTER - TOKEN_W / 2);
+    tokenImg.setAttribute('y', CENTER - TOKEN_H / 2);
+    tokenImg.setAttribute('pointer-events', 'none');
+    svg.appendChild(tokenImg);
+
+    box.appendChild(svg);
+    fosOverlay.appendChild(box);
+
+    function renderGrid() {
+        gridGroup.innerHTML = '';
+
+        const playerPx = hexToPixel(playerQ, playerR);
+        const offsetX  = CENTER - playerPx.x;
+        const offsetY  = CENTER - playerPx.y;
+        const RANGE    = 7;
+
+        for (let q = playerQ - RANGE; q <= playerQ + RANGE; q++) {
+            for (let r = playerR - RANGE; r <= playerR + RANGE; r++) {
+                const { x, y } = hexToPixel(q, r);
+                const sx = x + offsetX;
+                const sy = y + offsetY;
+
+                // Skip if outside the box viewport + buffer
+                if (sx < -HEX_SIZE || sx > BOX_SIZE + HEX_SIZE) continue;
+                if (sy < -HEX_SIZE || sy > BOX_SIZE + HEX_SIZE) continue;
+
+                const dist     = hexDist(q, r, playerQ, playerR);
+                const adjacent = dist === 1;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d',            hexPath(sx, sy));
+                path.setAttribute('fill',         '#fff');
+                path.setAttribute('stroke',       '#222');
+                path.setAttribute('stroke-width', '1.5');
+
+                if (adjacent) {
+                    path.style.cursor = 'pointer';
+                    path.addEventListener('mouseenter', () => path.setAttribute('fill', '#e8e8e8'));
+                    path.addEventListener('mouseleave', () => path.setAttribute('fill', '#fff'));
+                    const cq = q, cr = r;
+                    path.addEventListener('click', () => movePlayer(cq, cr));
+                }
+
+                gridGroup.appendChild(path);
+            }
+        }
+
+        // Re-append token so it always sits on top
+        svg.appendChild(tokenImg);
+    }
+
+    function showMoonMilestoneText(text, isFinal) {
+        textShowing = true;
+        const fosOverlay = document.getElementById('fos-overlay');
+
+        const tb = document.createElement('div');
+        tb.style.cssText = `
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 36%;
+            background: #fff;
+            border: 2px solid #000;
+            padding: 24px 28px;
+            font-family: Georgia, serif;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #000;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            z-index: 10;
+            cursor: pointer;
+        `;
+        tb.textContent = text;
+        fosOverlay.appendChild(tb);
+
+        // Fade in
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            tb.style.opacity = '1';
+        }));
+
+        let dismissed = false;
+        function dismiss() {
+            if (dismissed) return;
+            dismissed = true;
+            tb.style.opacity = '0';
+            setTimeout(() => {
+                tb.remove();
+                textShowing = false;
+                if (isFinal) {
+                    endGame(false, 'You got lost...permanently.', 'Lost Forever.');
+                    setTimeout(() => {
+                        const fosOverlay = document.getElementById('fos-overlay');
+                        if (fosOverlay) fosOverlay.remove();
+                    }, 1400);
+                }
+            }, 800);
+        }
+
+        tb.addEventListener('click', dismiss);
+
+        // Auto-dismiss after 6s
+        setTimeout(dismiss, 6000);
+    }
+
+    function movePlayer(newQ, newR) {
+        if (textShowing) return;
+
+        const oldPx = hexToPixel(playerQ, playerR);
+        const newPx = hexToPixel(newQ, newR);
+        const deltaX = oldPx.x - newPx.x;
+        const deltaY = oldPx.y - newPx.y;
+
+        // Block further clicks during animation
+        gridGroup.style.pointerEvents = 'none';
+        gridGroup.style.transition = 'transform 0.35s ease';
+        gridGroup.style.transform  = `translate(${deltaX}px, ${deltaY}px)`;
+
+        setTimeout(() => {
+            playerQ = newQ;
+            playerR = newR;
+            gridGroup.style.transition = 'none';
+            gridGroup.style.transform  = '';
+            renderGrid();
+            gridGroup.style.pointerEvents = '';
+            moveCount++;
+            if (MILESTONE_TEXTS[moveCount]) {
+                showMoonMilestoneText(MILESTONE_TEXTS[moveCount], moveCount === 75);
+            }
+        }, 350);
+    }
+
+    renderGrid();
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        box.style.opacity = '1';
+    }));
+}
+
+function showFosMoonscape(panel) {
+    fosSwapToResponse(panel, 'I will help you.', () => {
+        const fosOverlay = document.getElementById('fos-overlay');
+
+        // Fade out everything on the fos overlay
+        if (fosOverlay) {
+            Array.from(fosOverlay.children).forEach(child => {
+                child.style.transition = 'opacity 0.8s ease';
+                child.style.opacity = '0';
+            });
+        }
+
+        setTimeout(() => {
+            // Replace overlay contents with full-screen moonscape image
+            if (fosOverlay) fosOverlay.innerHTML = '';
+
+            const moonImg = document.createElement('img');
+            moonImg.src = 'TheMoonscape.png';
+            moonImg.style.cssText = `
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                opacity: 0;
+                transition: opacity 1.8s ease;
+            `;
+
+            const textBox = document.createElement('div');
+            textBox.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 36%;
+                background: #fff;
+                color: #111;
+                border: 1.5px solid #000;
+                font-family: var(--font);
+                font-size: 0.95rem;
+                line-height: 1.8;
+                text-align: center;
+                padding: 44px 40px;
+                opacity: 0;
+                transition: opacity 1.4s ease;
+            `;
+            textBox.textContent = 'The woods softly fade and the sky falls to meet you. You are surrounded by stars and the dirt is pulverized to a grey ash. The trees lay down and decay into nothing but dust. You look around. You see nothing but the familiar Moon in the distance.';
+
+            if (fosOverlay) {
+                fosOverlay.appendChild(moonImg);
+                fosOverlay.appendChild(textBox);
+            }
+
+            // Fade image in
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                moonImg.style.opacity = '1';
+                // Fade text box in after image is mostly visible
+                setTimeout(() => {
+                    textBox.style.opacity = '1';
+                    // Hold 8s, fade out, then show hex box
+                    setTimeout(() => {
+                        textBox.style.opacity = '0';
+                        setTimeout(() => {
+                            textBox.remove();
+                            showFosMoonHexBox();
+                        }, 1500);
+                    }, 8000);
+                }, 1400);
+            }));
+        }, 900);
+    });
+}
+
+function showFosNewRiverGorge(panel) {
+    const fosOverlay = document.getElementById('fos-overlay');
+    if (!fosOverlay) return;
+
+    // Fade out existing overlay contents
+    Array.from(fosOverlay.children).forEach(child => {
+        child.style.transition = 'opacity 0.8s ease';
+        child.style.opacity = '0';
+    });
+
+    setTimeout(() => {
+        if (fosOverlay) fosOverlay.innerHTML = '';
+
+        const gorgeImg = document.createElement('img');
+        gorgeImg.src = 'newrivergorge.png';
+        gorgeImg.style.cssText = `
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.8s ease;
+        `;
+
+        const textBox = document.createElement('div');
+        textBox.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 36%;
+            background: #fff;
+            color: #111;
+            border: 1.5px solid #000;
+            font-family: var(--font);
+            font-size: 0.95rem;
+            line-height: 1.8;
+            text-align: center;
+            padding: 44px 40px;
+            opacity: 0;
+            transition: opacity 1.4s ease;
+        `;
+        textBox.textContent = 'A blast of air rushes from beneath you and you discover that you are falling. Your arms wave about you as you spiral downward. In the distance, you see the silhouette of a massive steel span arch bridge. Before you can look closer, you smack into a body of rushing water...a river? You fight and paddle, eventually making it to the riverbed. A path winds up to the road where you can see an occasional car roll by. It\'ll take some time, but you could hitchhike wherever you are going.';
+
+        fosOverlay.appendChild(gorgeImg);
+        fosOverlay.appendChild(textBox);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            gorgeImg.style.opacity = '1';
+            setTimeout(() => {
+                textBox.style.opacity = '1';
+                textBox.style.cursor = 'pointer';
+                textBox.addEventListener('click', () => {
+                    textBox.style.opacity = '0';
+                    setTimeout(() => {
+                        textBox.remove();
+                        endGame(true, 'You are soaked, but you will manage to find a car ride home.', 'Wet.');
+                        setTimeout(() => { fosOverlay.remove(); }, 1400);
+                    }, 1500);
+                }, { once: true });
+            }, 1400);
+        }));
+    }, 900);
+}
+
+function showFosCharleston(panel) {
+    fosSwapToResponse(panel, 'Somewhere I will never go.', () => {
+        const fosOverlay = document.getElementById('fos-overlay');
+        if (!fosOverlay) return;
+
+        // Fade out existing overlay contents
+        Array.from(fosOverlay.children).forEach(child => {
+            child.style.transition = 'opacity 0.8s ease';
+            child.style.opacity = '0';
+        });
+
+        setTimeout(() => {
+            fosOverlay.innerHTML = '';
+
+            const cityImg = document.createElement('img');
+            cityImg.src = 'charlestonatnight.png';
+            cityImg.style.cssText = `
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                opacity: 0;
+                transition: opacity 1.8s ease;
+            `;
+
+            const textBox = document.createElement('div');
+            textBox.style.cssText = `
+                position: absolute;
+                top: 50%; left: 50%;
+                transform: translate(-50%, -50%);
+                width: 36%;
+                background: #fff;
+                color: #111;
+                border: 1.5px solid #000;
+                font-family: var(--font);
+                font-size: 0.95rem;
+                line-height: 1.8;
+                text-align: center;
+                padding: 44px 40px;
+                opacity: 0;
+                transition: opacity 1.4s ease;
+                cursor: pointer;
+            `;
+            textBox.textContent = 'The trees begin to gleam in spots and lights seem to grow on their branches. A large spire arises from the ground in the distance, first earthy, then stone. The dirt flattens and dries, forming a hard asphalt. You look around and see cars where there were once bushes. A quiet street. You can get home from here.';
+
+            fosOverlay.appendChild(cityImg);
+            fosOverlay.appendChild(textBox);
+
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                cityImg.style.opacity = '1';
+                setTimeout(() => {
+                    textBox.style.opacity = '1';
+                    textBox.addEventListener('click', () => {
+                        textBox.style.opacity = '0';
+                        setTimeout(() => {
+                            textBox.remove();
+
+                            // Show choice panel over the city image
+                            const choiceBox = document.createElement('div');
+                            choiceBox.style.cssText = `
+                                position: absolute;
+                                top: 50%; left: 50%;
+                                transform: translate(-50%, -50%);
+                                width: 36%;
+                                background: #fff;
+                                color: #111;
+                                border: 1.5px solid #000;
+                                font-family: var(--font);
+                                font-size: 0.95rem;
+                                line-height: 1.8;
+                                text-align: center;
+                                padding: 36px 40px;
+                                opacity: 0;
+                                transition: opacity 1.4s ease;
+                            `;
+
+                            const q = document.createElement('p');
+                            q.style.cssText = 'font-weight: bold; margin: 0 0 20px 0;';
+                            q.textContent = 'Go home or explore a little?';
+
+                            function makeBtn(label, onClickFn) {
+                                const btn = document.createElement('button');
+                                btn.textContent = label;
+                                btn.style.cssText = `
+                                    display: block;
+                                    width: 100%;
+                                    margin: 8px 0;
+                                    padding: 9px 14px;
+                                    font-family: var(--font);
+                                    font-size: 0.9rem;
+                                    background: #fff;
+                                    border: 1px solid #333;
+                                    cursor: pointer;
+                                `;
+                                btn.addEventListener('click', onClickFn);
+                                return btn;
+                            }
+
+                            choiceBox.appendChild(q);
+                            choiceBox.appendChild(makeBtn('Hitchhike home.', () => {
+                                endGame(true, 'You took a long drive home.', 'Homebody.');
+                                setTimeout(() => { fosOverlay.remove(); }, 1400);
+                            }));
+                            choiceBox.appendChild(makeBtn('Explore a little.', () => {
+                                window.open('https://wvtourism.com/', '_blank');
+                            }));
+
+                            fosOverlay.appendChild(choiceBox);
+                            requestAnimationFrame(() => requestAnimationFrame(() => {
+                                choiceBox.style.opacity = '1';
+                            }));
+                        }, 1400);
+                    }, { once: true });
+                }, 1400);
+            }));
+        }, 900);
+    });
+}
+
+function showFosQ_whereTo_noMoon(panel) {
+    fosShowPanel(panel, 'Where, then, would you like to go?', [
+        { label: 'The New River Gorge.', onClick: () => showFosNewRiverGorge(panel) },
+        { label: 'Charleston.',          onClick: () => showFosCharleston(panel) },
+        { label: 'My backyard.',         onClick: () => fosSwapToResponse(panel, '... ...Is that not...is that not a part of your...? Ah well, you may go there.', () => {
+            const fosOverlay = document.getElementById('fos-overlay');
+            endGame(true, 'You made it ho...to your backyard.', 'Very Funny.');
+            setTimeout(() => { if (fosOverlay) fosOverlay.remove(); }, 1400);
+        }) },
+        { label: 'My house.',            onClick: () => fosSwapToResponse(panel, 'You do not consider your house to be your home...I am sorry. That must be very hard.', () => {
+            const fosOverlay = document.getElementById('fos-overlay');
+            endGame(false, 'Maybe the woods were better after all.', 'Pitied.');
+            setTimeout(() => { if (fosOverlay) fosOverlay.remove(); }, 1400);
+        }) },
+    ]);
+}
+
+function showFosQ_whereTo(panel) {
+    fosShowPanel(panel, 'Where, then, would you like to go?', [
+        { label: 'The New River Gorge.', onClick: () => showFosNewRiverGorge(panel) },
+        { label: 'Charleston.',          onClick: () => showFosCharleston(panel) },
+        { label: 'My backyard.',         onClick: () => fosSwapToResponse(panel, '... ...Is that not...is that not a part of your...? Ah well, you may go there.', () => {
+            const fosOverlay = document.getElementById('fos-overlay');
+            endGame(true, 'You made it ho...to your backyard.', 'Very Funny.');
+            setTimeout(() => { if (fosOverlay) fosOverlay.remove(); }, 1400);
+        }) },
+        { label: 'My house.',            onClick: () => fosSwapToResponse(panel, 'You do not consider your house to be your home...I am sorry. That must be very hard.', () => {
+            const fosOverlay = document.getElementById('fos-overlay');
+            endGame(false, 'Maybe the woods were better after all.', 'Pitied.');
+            setTimeout(() => { if (fosOverlay) fosOverlay.remove(); }, 1400);
+        }) },
+        { label: 'The Moon.',            onClick: () => fosSwapToResponse(panel, 'I will not send you there. You will be permanently lost.', () => showFosQ_whereTo_noMoon(panel)) },
+    ]);
+}
+
+function showFosQ3b_stayLost(panel) {
+    fosShowPanel(panel, 'Do you want to stay lost?', [
+        { label: 'Yes.', onClick: () => showFosMoonscape(panel) },
+        { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'You do not wish to stay lost, but you do not wish to return home?', () => showFosQ_whereTo(panel)) },
+    ]);
+}
+
+function showFosQ3_goHome(panel) {
+    fosShowPanel(panel, 'Do you want to go home?', [
+        { label: 'Yes.',          onClick: () => fosGrantHomeEscape() },
+        { label: 'Maybe.',        onClick: () => fosSwapToResponse(panel, 'You do not know? That is understandable. The woods entice some people.', () => showFosQ4_somethingElse(panel)) },
+        { label: 'No.',           onClick: () => fosSwapToResponse(panel, 'You do not wish to return home?', () => showFosQ3b_stayLost(panel)) },
+        { label: "I don't know.", onClick: () => {} },
+    ]);
+}
+
+function showFosQ2(panel) {
+    fosShowPanel(panel, 'Why are you here?', [
+        { label: 'I got lost.',     onClick: () => fosSwapToResponse(panel, 'Lost?', () => showFosQ3_goHome(panel)) },
+        { label: "I don't know.",   onClick: () => {} },
+        { label: 'Your knowledge.', onClick: () => {} },
+        { label: 'Your power.',     onClick: () => {} },
+    ]);
+}
+
+function showFosQuestion(overlay) {
+    // Fade out all floating words
+    overlay.querySelectorAll('span').forEach(s => {
+        s.style.transition = 'opacity 0.4s ease';
+        s.style.opacity = '0';
+        setTimeout(() => s.remove(), 500);
+    });
+
+    const panel = makeFosPanel(overlay);
+
+    const responses = {
+        'An accountant.': 'I do not know what that is.',
+        'A human.':       'Funny little things. I admire your hubris, though I suppose we are all the same in the end.',
+        'Your friend.':   'You are not my friend.',
+        'Nobody.':        "Aren't we all?",
+    };
+
+    setTimeout(() => {
+        fosShowPanel(panel, 'Who are you?', [
+            'An accountant.', 'A human.', 'Your friend.', 'Nobody.'
+        ].map(label => ({
+            label,
+            onClick: () => fosSwapToResponse(panel, responses[label], () => showFosQ2(panel))
+        })));
+    }, 500);
+}
+
+function startFosWords(overlay, img) {
+    let stopped = false;
+
+    // Clicking the boulder stops new words, fades existing ones, slides boulder right, shows question
+    img.style.cursor = 'pointer';
+    img.addEventListener('click', () => {
+        stopped = true;
+        img.style.cursor = 'default';
+        img.style.pointerEvents = 'none';
+        // Slide boulder to the right so boulder + question panel are centered together
+        img.style.transition = 'transform 0.7s ease';
+        img.style.transform = 'translateX(44%)';
+        showFosQuestion(overlay);
+    }, { once: true });
+
+    const words = [
+        'Pain', 'Dark', 'Where?', 'Lost', 'Home...', 'Struggle',
+        'Foreign', 'Why?', 'Listen', 'Hear me', 'Please', 'Sick',
+        'Gone', 'No', 'Help', 'Return', 'Andromeda', 'Stars'
+    ];
+
+    const sentences = {
+        'Pain':      'It hurt so much.',
+        'Dark':      'I cannot see.',
+        'Where?':    "What's going on? Where am I?",
+        'Lost':      'This strange world...',
+        'Struggle':  'I fought so hard.',
+        'Foreign':   'I am.',
+        'Why?':      'I did not deserve this.',
+        'Listen':    'Someone is out there.',
+        'Hear me':   'I have so much to say.',
+        'Please':    "I don't want to.",
+        'Home...':   "It's so far away.",
+        'Sick':      'I kill the world.',
+        'Gone':      'All my friends.',
+        'No':        "This isn't right.",
+        'Help':      'I beg of you.',
+        'Return':    'If only.',
+        'Andromeda': 'Do you see its beauty?',
+        'Stars':     'Multitudes and multitudes.'
+    };
+
+    function spawnWord() {
+        const overlay = document.getElementById('fos-overlay');
+        if (!overlay) return;
+
+        const word = words[Math.floor(Math.random() * words.length)];
+        const el = document.createElement('span');
+        el.textContent = word;
+
+        // Place in one of four edge strips to avoid the centered boulder
+        let x, y;
+        const zone = Math.floor(Math.random() * 4);
+        if (zone === 0)      { x = Math.random() * 90;      y = Math.random() * 16; }
+        else if (zone === 1) { x = Math.random() * 90;      y = 82 + Math.random() * 14; }
+        else if (zone === 2) { x = Math.random() * 16;      y = 16 + Math.random() * 66; }
+        else                 { x = 82 + Math.random() * 14; y = 16 + Math.random() * 66; }
+
+        const stayDuration = 1200 + Math.random() * 2000;
+        const fadeDuration = (0.8 + Math.random() * 0.6).toFixed(2);
+
+        el.style.cssText = `
+            position: absolute;
+            left: ${x}%;
+            top: ${y}%;
+            transform: translateX(-50%);
+            font-family: var(--font);
+            font-size: ${0.8 + Math.random() * 1.0}rem;
+            color: #333;
+            opacity: 0;
+            transition: opacity ${fadeDuration}s ease;
+            cursor: pointer;
+            z-index: 2;
+            white-space: nowrap;
+        `;
+        overlay.appendChild(el);
+
+        // Fade in
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            el.style.opacity = (0.3 + Math.random() * 0.5).toFixed(2);
+        }));
+
+        // Click: fade word out quickly, show sentence centered on same point
+        el.addEventListener('click', () => {
+            const sentence = sentences[word];
+            if (!sentence || el.dataset.clicked) return;
+            el.dataset.clicked = '1';
+
+            // Quickly fade the word out
+            el.style.transition = 'opacity 0.25s ease';
+            el.style.opacity = '0';
+
+            const sEl = document.createElement('span');
+            sEl.textContent = sentence;
+            sEl.style.cssText = `
+                position: absolute;
+                left: ${x}%;
+                top: calc(${y}% + 1.6em);
+                transform: translateX(-50%);
+                font-family: var(--font);
+                font-size: 0.75rem;
+                color: #555;
+                opacity: 0;
+                transition: opacity 0.8s ease;
+                pointer-events: none;
+                z-index: 3;
+                white-space: nowrap;
+            `;
+            overlay.appendChild(sEl);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                sEl.style.opacity = '0.8';
+            }));
+            setTimeout(() => {
+                sEl.style.opacity = '0';
+                setTimeout(() => sEl.remove(), 900);
+            }, stayDuration * 3);
+        });
+
+        // Fade out and remove
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 1000);
+        }, stayDuration);
+    }
+
+    // Spawn words continuously at varying intervals; stops when boulder is clicked
+    function scheduleNext() {
+        if (stopped) return;
+        const delay = 300 + Math.random() * 700;
+        setTimeout(() => {
+            if (stopped || !document.getElementById('fos-overlay')) return;
+            spawnWord();
+            scheduleNext();
+        }, delay);
+    }
+
+    // Kick off a few immediately so it doesn't feel empty
+    spawnWord(); spawnWord(); spawnWord();
+    scheduleNext();
 }
 
 // ============================================================
@@ -6023,7 +7004,15 @@ function attemptEscape() {
         addLog('You are not close enough to the edge.', 'danger');
         return;
     }
-    endGame(true, 'You step through the treeline and onto a road. The woods release you. Somewhere behind you, a dog barks once — and then silence.');
+    let msg;
+    if (G.player.items.includes('150 Pound Block of Rhodium')) {
+        msg = 'You leave the woods with all the money in the world.';
+    } else if (G.fosHelpedEscape) {
+        msg = 'You escaped the woods and met something interesting.';
+    } else {
+        msg = 'You step through the treeline and onto a road. The woods release you. Somewhere behind you, a dog barks once — and then silence.';
+    }
+    endGame(true, msg);
 }
 
 function endGame(win, message, title) {
@@ -6364,11 +7353,13 @@ function devTriggerEncounter() {
     document.getElementById('ep-result').classList.add('hidden');
     document.getElementById('ep-choices').innerHTML = '';
     document.body.classList.remove('level4-invert');
+    const existingFos = document.getElementById('fos-overlay');
+    if (existingFos) existingFos.remove();
 
     const val = document.getElementById('dev-encounter-select').value;
     if (!val) return;
     const [level, id] = val.split(':');
-    if (level === '4') document.body.classList.add('level4-invert');
+    if (level === '4' && id !== 'face_of_stone') document.body.classList.add('level4-invert');
     const encounter = ENCOUNTERS[level].find(e => e.id === id);
     if (!encounter) return;
 
@@ -6380,7 +7371,12 @@ function devTriggerEncounter() {
         playThirdPartyIntro(encounter);
         return;
     }
+    if (encounter.id === 'face_of_stone') {
+        playFaceOfStoneIntro();
+        return;
+    }
 
+    if (!encounter.choices.length) return;
     const c = encounter.choices[0];
     const isAutoResolve = encounter.choices.length === 1 && !c.check && !c.multiCheck;
 
