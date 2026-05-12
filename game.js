@@ -4407,12 +4407,81 @@ function showFosQ3b_stayLost(panel) {
     ]);
 }
 
+function showFosQ3_goHome_noIDK(panel) {
+    fosShowPanel(panel, 'Do you want to go home?', [
+        { label: 'Yes.',   onClick: () => fosGrantHomeEscape() },
+        { label: 'Maybe.', onClick: () => fosSwapToResponse(panel, 'You do not know? That is understandable. The woods entice some people.', () => showFosQ4_somethingElse(panel)) },
+        { label: 'No.',    onClick: () => fosSwapToResponse(panel, 'You do not wish to return home?', () => showFosQ3b_stayLost(panel)) },
+    ]);
+}
+
 function showFosQ3_goHome(panel) {
     fosShowPanel(panel, 'Do you want to go home?', [
         { label: 'Yes.',          onClick: () => fosGrantHomeEscape() },
         { label: 'Maybe.',        onClick: () => fosSwapToResponse(panel, 'You do not know? That is understandable. The woods entice some people.', () => showFosQ4_somethingElse(panel)) },
         { label: 'No.',           onClick: () => fosSwapToResponse(panel, 'You do not wish to return home?', () => showFosQ3b_stayLost(panel)) },
-        { label: "I don't know.", onClick: () => {} },
+        { label: "I don't know.", onClick: () => {
+            // Fade out panel, show response text
+            panel.style.opacity = '0';
+            setTimeout(() => {
+                panel.innerHTML = '';
+                const p = document.createElement('div');
+                p.textContent = 'Ok, I will await your decision.';
+                p.style.cssText = `
+                    font-family: var(--font);
+                    font-size: 0.95rem;
+                    color: #333;
+                    font-style: italic;
+                    line-height: 1.5;
+                `;
+                panel.appendChild(p);
+                fosFadeIn(panel);
+                // Hang 4s, fade text out, then show button
+                setTimeout(() => {
+                    panel.style.opacity = '0';
+                    setTimeout(() => {
+                        panel.innerHTML = '';
+                        const btn = document.createElement('button');
+                        btn.textContent = 'I am ready.';
+                        btn.className = 'choice-btn';
+                        btn.style.cssText = 'display: block; width: 100%; margin-bottom: 8px;';
+
+                        let awaitTimer = null;
+                        btn.addEventListener('click', () => {
+                            if (awaitTimer) { clearTimeout(awaitTimer); awaitTimer = null; }
+                            showFosQ3_goHome_noIDK(panel);
+                        });
+                        panel.appendChild(btn);
+                        fosFadeIn(panel);
+
+                        // After 12s, Face offers tic-tac-toe
+                        awaitTimer = setTimeout(() => {
+                            panel.style.opacity = '0';
+                            setTimeout(() => {
+                                panel.innerHTML = '';
+                                const p = document.createElement('div');
+                                p.textContent = 'We can do something while we wait.';
+                                p.style.cssText = `
+                                    font-family: var(--font);
+                                    font-size: 0.95rem;
+                                    color: #333;
+                                    font-style: italic;
+                                    line-height: 1.5;
+                                `;
+                                panel.appendChild(p);
+                                fosFadeIn(panel);
+                                setTimeout(() => {
+                                    panel.style.opacity = '0';
+                                    setTimeout(() => {
+                                        initFosTicTacToe(panel, () => showFosQ3_goHome_noIDK(panel));
+                                    }, 600);
+                                }, 4000);
+                            }, 700);
+                        }, 12000);
+                    }, 600);
+                }, 4000);
+            }, 700);
+        }},
     ]);
 }
 
