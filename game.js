@@ -3643,7 +3643,7 @@ function playFaceOfStoneIntro() {
 
     // Image element, starts invisible
     const img = document.createElement('img');
-    img.src = 'faceofstone.png';
+    img.src = 'assets/faceofstone.png';
     img.style.cssText = `
         max-width: 480px; max-height: 480px;
         opacity: 0; transition: opacity 2s ease;
@@ -3730,11 +3730,18 @@ function fosSwapToResponse(panel, responseText, thenFn) {
         `;
         panel.appendChild(p);
         fosFadeIn(panel);
-        // Hang for 4s, then fade out at the same rate, then call thenFn
-        setTimeout(() => {
+
+        function dismiss() {
+            panel.style.cursor = '';
+            panel.removeEventListener('click', dismiss);
+            clearTimeout(autoTimer);
             panel.style.opacity = '0';
             setTimeout(thenFn, 600);
-        }, 4000);
+        }
+
+        panel.style.cursor = 'pointer';
+        panel.addEventListener('click', dismiss);
+        const autoTimer = setTimeout(dismiss, 4000);
     }, 700);
 }
 
@@ -3963,7 +3970,7 @@ function showFosMoonHexBox() {
     // Token — always fixed at center of box
     const TOKEN_W = 100, TOKEN_H = 70;
     const tokenImg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-    tokenImg.setAttribute('href', 'accountantglasses.png');
+    tokenImg.setAttribute('href', 'assets/accountantglasses.png');
     tokenImg.setAttribute('width',  TOKEN_W);
     tokenImg.setAttribute('height', TOKEN_H);
     tokenImg.setAttribute('x', CENTER - TOKEN_W / 2);
@@ -4123,7 +4130,7 @@ function showFosMoonscape(panel) {
             if (fosOverlay) fosOverlay.innerHTML = '';
 
             const moonImg = document.createElement('img');
-            moonImg.src = 'TheMoonscape.png';
+            moonImg.src = 'assets/TheMoonscape.png';
             moonImg.style.cssText = `
                 position: absolute;
                 inset: 0;
@@ -4193,7 +4200,7 @@ function showFosNewRiverGorge(panel) {
         if (fosOverlay) fosOverlay.innerHTML = '';
 
         const gorgeImg = document.createElement('img');
-        gorgeImg.src = 'newrivergorge.png';
+        gorgeImg.src = 'assets/newrivergorge.png';
         gorgeImg.style.cssText = `
             position: absolute;
             inset: 0;
@@ -4260,7 +4267,7 @@ function showFosCharleston(panel) {
             fosOverlay.innerHTML = '';
 
             const cityImg = document.createElement('img');
-            cityImg.src = 'charlestonatnight.png';
+            cityImg.src = 'assets/charlestonatnight.png';
             cityImg.style.cssText = `
                 position: absolute;
                 inset: 0;
