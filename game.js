@@ -4492,12 +4492,596 @@ function showFosQ3_goHome(panel) {
     ]);
 }
 
+function showFosUniverse(panel) {
+    const fosOverlay = document.getElementById('fos-overlay');
+    if (!fosOverlay) return;
+
+    Array.from(fosOverlay.children).forEach(child => {
+        child.style.transition = 'opacity 0.8s ease';
+        child.style.opacity = '0';
+    });
+
+    setTimeout(() => {
+        fosOverlay.innerHTML = '';
+
+        const sharedStyle = `
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        `;
+
+        const img1 = document.createElement('img');
+        img1.src = 'assets/milkyway1.png';
+        img1.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 1.8s ease;';
+
+        const img2 = document.createElement('img');
+        img2.src = 'assets/milkyway2.png';
+        img2.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 7s ease;';
+
+        const img3 = document.createElement('img');
+        img3.src = 'assets/milkyway3.png';
+        img3.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 2s ease;';
+
+        const img4 = document.createElement('img');
+        img4.src = 'assets/milkyway4.png';
+        img4.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.5s ease;';
+
+        const img5 = document.createElement('img');
+        img5.src = 'assets/milkyway5.png';
+        img5.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.2s ease;';
+
+        const img6 = document.createElement('img');
+        img6.src = 'assets/milkyway6.png';
+        img6.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.05s ease;';
+
+        const img7 = document.createElement('img');
+        img7.src = 'assets/milkyway7.png';
+        img7.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.01s ease;';
+
+        const blackOut = document.createElement('div');
+        blackOut.style.cssText = sharedStyle + 'background: #000; opacity: 0;';
+
+        const textLineStyle = `
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font);
+            font-size: 1.6rem;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            cursor: pointer;
+            letter-spacing: 0.05em;
+        `;
+
+        const didYouSee = document.createElement('div');
+        didYouSee.textContent = 'Did you see?';
+        didYouSee.style.cssText = textLineStyle;
+
+        const line2 = document.createElement('div');
+        line2.textContent = 'Oh...I killed you. That is not what I wanted.';
+        line2.style.cssText = textLineStyle + 'opacity: 0; pointer-events: none;';
+
+        const line3 = document.createElement('div');
+        line3.textContent = 'I am sorry. The Universe is cruel.';
+        line3.style.cssText = textLineStyle + 'opacity: 0; pointer-events: none;';
+
+        didYouSee.addEventListener('click', () => {
+            didYouSee.style.opacity = '0';
+            didYouSee.style.pointerEvents = 'none';
+            setTimeout(() => {
+                line2.style.pointerEvents = '';
+                line2.style.opacity = '1';
+            }, 800);
+        });
+
+        line2.addEventListener('click', () => {
+            line2.style.opacity = '0';
+            line2.style.pointerEvents = 'none';
+            setTimeout(() => {
+                line3.style.pointerEvents = '';
+                line3.style.opacity = '1';
+            }, 800);
+        });
+
+        line3.addEventListener('click', () => {
+            line3.style.opacity = '0';
+            line3.style.pointerEvents = 'none';
+            setTimeout(() => {
+                const fosOverlay = document.getElementById('fos-overlay');
+                endGame(false, 'Your death was an accident.', 'In Awe.');
+                setTimeout(() => { if (fosOverlay) fosOverlay.remove(); }, 1400);
+            }, 800);
+        });
+
+        fosOverlay.appendChild(img1);
+        fosOverlay.appendChild(img2);
+        fosOverlay.appendChild(img3);
+        fosOverlay.appendChild(img4);
+        fosOverlay.appendChild(img5);
+        fosOverlay.appendChild(img6);
+        fosOverlay.appendChild(img7);
+        fosOverlay.appendChild(blackOut);
+        fosOverlay.appendChild(didYouSee);
+        fosOverlay.appendChild(line2);
+        fosOverlay.appendChild(line3);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            img1.style.opacity = '1';
+            setTimeout(() => {
+                img2.style.opacity = '1';
+                setTimeout(() => {
+                    img3.style.opacity = '1';
+                    setTimeout(() => {
+                        img4.style.opacity = '1';
+                        setTimeout(() => {
+                            img5.style.opacity = '1';
+                            setTimeout(() => {
+                                img6.style.opacity = '1';
+                                setTimeout(() => {
+                                    img7.style.opacity = '1';
+                                    setTimeout(() => {
+                                        blackOut.style.opacity = '1'; // instant cut to black
+                                        setTimeout(() => {
+                                            didYouSee.style.opacity = '1';
+                                        }, 800); // short pause after black, then fade in text
+                                    }, 10); // img7 fade completes
+                                }, 50); // img6 fade completes
+                            }, 200); // img5 fade completes
+                        }, 500); // img4 fade completes
+                    }, 2000); // img3 fade completes
+                }, 8000); // 7s fade + 1s hold
+            }, 2000);
+        }));
+    }, 900);
+}
+
+const FOS_GIFTS = [
+    { key: 'canny_eyes',    label: 'Canny eyes.',    centerText: 'Your vision sharpens and the dark colors around you melt into focus. Something tells you that your eyes have changed.' },
+    { key: 'fleet_soles',   label: 'Fleet Soles.',   centerText: "Your feet bend and break, tearing your shoes to pieces. It doesn't hurt, but you don't want to look down either." },
+    { key: 'greater_limbs', label: 'Greater Limbs.', centerText: 'Your arms crackle and snap, reforming themselves. Suddenly, you can touch your toes without bending over and your hands are heavier.' },
+    { key: 'favor',         label: 'Favor.',         centerText: 'Are you growing taller...no, nothing has changed about your legs. Your head...is it more oblong?' },
+    { key: 'your_will',     label: 'Your Will.',     centerText: 'You are rent in two. A ringing sounds in your ear and it is some time before you regain an awareness of your surroundings.' },
+];
+
+function showFosBelieveYesGifts(panel, remaining, picksLeft) {
+    fosShowPanel(panel, 'What would you like?', remaining.map(gift => ({
+        label: gift.label,
+        onClick: () => {
+            const next = remaining.filter(g => g.key !== gift.key);
+            applyFosGift(panel, gift, next, picksLeft - 1);
+        }
+    })));
+}
+
+function applyFosGiftEffects(gift) {
+    switch (gift.key) {
+        case 'canny_eyes':
+            if (!G.player.attributes.includes("Cat's Eyes")) G.player.attributes.push("Cat's Eyes");
+            G.player.visibility = parseFloat((G.player.visibility + 0.1).toFixed(1));
+            break;
+        case 'fleet_soles':
+            if (!G.player.attributes.includes('Cloven Feet')) G.player.attributes.push('Cloven Feet');
+            G.player.speed = parseFloat((G.player.speed + 0.1).toFixed(1));
+            break;
+        case 'greater_limbs':
+            if (!G.player.attributes.includes('Long Arms')) G.player.attributes.push('Long Arms');
+            G.player.strength = parseFloat((G.player.strength + 0.1).toFixed(1));
+            break;
+        case 'favor':
+            if (!G.player.attributes.includes('A New Face')) G.player.attributes.push('A New Face');
+            break;
+        case 'your_will': {
+            if (!G.player.attributes.includes('A Complete Makeover')) G.player.attributes.push('A Complete Makeover');
+            const stats = ['visibility', 'strength', 'speed'];
+            for (let i = stats.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [stats[i], stats[j]] = [stats[j], stats[i]];
+            }
+            G.player[stats[0]] = parseFloat((G.player[stats[0]] + rollD10() * 0.1).toFixed(1));
+            G.player[stats[1]] = parseFloat((G.player[stats[1]] + rollD10() * 0.1).toFixed(1));
+            G.player[stats[2]] = parseFloat((G.player[stats[2]] - rollD10() * 0.1).toFixed(1));
+            break;
+        }
+    }
+    updateStats();
+}
+
+function applyFosGift(panel, gift, remaining, picksLeft) {
+    fosSwapToResponse(panel, 'Granted.', () => {
+        applyFosGiftEffects(gift);
+        const fosOverlay = document.getElementById('fos-overlay');
+        const img = fosOverlay ? fosOverlay.querySelector('img') : null;
+        if (img) { img.style.transition = 'opacity 0.6s ease'; img.style.opacity = '0'; }
+        setTimeout(() => {
+            showFosCenterText(gift.centerText, () => {
+                if (picksLeft > 0) {
+                    if (img) { img.style.opacity = '1'; }
+                    setTimeout(() => showFosBelieveYesGifts(panel, remaining, picksLeft), 600);
+                } else {
+                    showFosCenterText('Now go. I hope you are satisfied.', () => showFosCloseOverlay());
+                }
+            });
+        }, 700);
+    });
+}
+
+const FOS_PROOFS = [
+    {
+        key: 'woods',
+        label: 'The warping of the woods.',
+        rebuttal: 'I have destroyed these woods. This is not something to admire. What other proofs do you have?'
+    },
+    {
+        key: 'followers',
+        label: 'The excellence of your followers.',
+        rebuttal: 'My followers are twisted and can\'t even understand me. There is nothing to love about them. What other proofs do you have?'
+    },
+    {
+        key: 'form',
+        label: 'Your form.',
+        rebuttal: 'I am shadow of what I once was, a pebble on the worst end of a foreign galaxy. Do not be impressed by what I am. What other proofs do you have?'
+    },
+    {
+        key: 'eyes',
+        label: 'My own eyes.',
+        rebuttal: 'You look upon me and think that I am great? I am not. Have you no other proofs?'
+    },
+];
+
+function showFosCenterText(text, thenFn) {
+    const fosOverlay = document.getElementById('fos-overlay');
+    if (!fosOverlay) return;
+
+    const el = document.createElement('div');
+    el.style.cssText = `
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40%;
+        text-align: center;
+        font-family: var(--font);
+        font-size: 1rem;
+        color: #222;
+        line-height: 1.6;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+        z-index: 5;
+        cursor: pointer;
+    `;
+    el.textContent = text;
+    fosOverlay.appendChild(el);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = '1'; }));
+
+    function dismiss() {
+        clearTimeout(timer);
+        el.style.opacity = '0';
+        setTimeout(() => { el.remove(); thenFn(); }, 700);
+    }
+
+    el.addEventListener('click', dismiss, { once: true });
+    const timer = setTimeout(dismiss, 4000);
+}
+
+function showFosBelieveYouProofs(panel, remaining) {
+    fosShowPanel(panel, 'What gave you this false notion?', remaining.map(proof => ({
+        label: proof.label,
+        onClick: () => {
+            const next = remaining.filter(p => p.key !== proof.key);
+            fosSwapToResponse(panel, proof.rebuttal, () => {
+                if (next.length === 0) {
+                    fosShowPanel(panel, 'Be honest. You have no other proofs. Do you still wish to follow me?', [
+                        { label: 'Yes.', onClick: () => fosSwapToResponse(panel, "I can't convince you otherwise. In that case, I will give you two gifts reserved for my followers.", () => {
+                            showFosBelieveYesGifts(panel, FOS_GIFTS, 2);
+                        }) },
+                        { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Correct. And for your knowledge, I did not lead you here either. But I can get you out.', () => {
+                            fosSwapToResponse(panel, 'Goodbye.', () => {
+                                const fosOverlay = document.getElementById('fos-overlay');
+                                endGame(true, 'You escaped the woods without a belief system.', 'You Escaped.');
+                                setTimeout(() => { if (fosOverlay) fosOverlay.remove(); }, 1400);
+                            });
+                        }) },
+                    ]);
+                } else {
+                    showFosBelieveYouProofs(panel, next);
+                }
+            });
+        }
+    })));
+}
+
+function showFosBelieveYou(panel) {
+    fosSwapToResponse(panel, 'Me? Please don\'t. I have already caused so much pain.', () => {
+        showFosBelieveYouProofs(panel, FOS_PROOFS);
+    });
+}
+
+function showFosQ_believe_noUniverse(panel) {
+    fosShowPanel(panel, 'What else do you believe in?', [
+        { label: 'A Loving God.', onClick: () => fosSwapToResponse(panel, 'I am glad. Then perhaps this experience is a good thing and you were meant to come to me. Let me make it better.', () => {
+            G.player.items.push("The Face's Blessing");
+            G.player.strength   = parseFloat((G.player.strength   + 0.3).toFixed(1));
+            G.player.speed      = parseFloat((G.player.speed      + 0.3).toFixed(1));
+            G.player.visibility = parseFloat((G.player.visibility + 0.3).toFixed(1));
+            showFosCloseOverlay();
+        }) },
+        { label: 'Myself.',  onClick: () => fosSwapToResponse(panel, "Yourself? You are but the morning dew that appears for a little while and then vanishes. 'Yourself,' what idiocy.", () => {
+            fosSwapToResponse(panel, 'Go. I will not speak to you further.', () => showFosCloseOverlay());
+        }) },
+        { label: 'Nothing.', onClick: () => fosSwapToResponse(panel, 'I see. This is uncharacteristic of humans. Then our meeting was by chance.', () => showFosQ4_somethingElse(panel)) },
+        { label: 'You.',     onClick: () => showFosBelieveYou(panel) },
+    ]);
+}
+
+function showFosQ_believe(panel) {
+    fosShowPanel(panel, 'What do you believe in?', [
+        { label: 'A Loving God.', onClick: () => fosSwapToResponse(panel, 'I am glad. Then perhaps this experience is a good thing and you were meant to come to me. Let me make it better.', () => {
+            G.player.items.push("The Face's Blessing");
+            G.player.strength   = parseFloat((G.player.strength   + 0.3).toFixed(1));
+            G.player.speed      = parseFloat((G.player.speed      + 0.3).toFixed(1));
+            G.player.visibility = parseFloat((G.player.visibility + 0.3).toFixed(1));
+            showFosCloseOverlay();
+        }) },
+        { label: 'The Universe.', onClick: () => fosSwapToResponse(panel, 'Then our meeting may have been inevitable...but the Universe is not kind. I warn you.', () => {
+            fosShowPanel(panel, 'Can I show you something?', [
+                { label: 'Yes.', onClick: () => showFosUniverse(panel) },
+                { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Very well.', () => showFosQ_believe_noUniverse(panel)) },
+            ]);
+        }) },
+        { label: 'Myself.',       onClick: () => fosSwapToResponse(panel, "Yourself? You are but the morning dew that appears for a little while and then vanishes. 'Yourself,' what idiocy.", () => {
+            fosSwapToResponse(panel, 'Go. I will not speak to you further.', () => showFosCloseOverlay());
+        }) },
+        { label: 'Nothing.',      onClick: () => fosSwapToResponse(panel, 'I see. This is uncharacteristic of humans. Then our meeting was by chance.', () => showFosQ4_somethingElse(panel)) },
+        { label: 'You.',          onClick: () => showFosBelieveYou(panel) },
+    ]);
+}
+
+const FOS_CHAOS_WORDS = [
+    'Anger','Rage','Fear','Aggression','Supreme','Fury','Infinite','Obsession',
+    'Influence','War','Extreme','Heaven','Earth','Garish','Damnation','Destruction',
+    'Break','End','Horrid','Overwhelm','Excoriate','Excruciate','Hamper','Phlegm',
+    'Blood','Bone','Star','Nebula','Black','Saturn','Mercurial','Moon','Sordid','Terror',
+    'Consume','Devour','Void','Shatter','Collapse','Unmake','Eternal','Vast','Hunger',
+    'Rend','Swallow','Eclipse','Endless','Crush','Fracture','Oblivion','Scorch',
+    'Rupture','Blind','Gnaw','Writhe','Unravel','Sovereign','Splinter','Implode',
+    'Erase','Suffer','Wither','Corrode','Annihilate'
+];
+
+function playFosPowerChaoticDeath() {
+    const overlay = document.getElementById('fos-overlay');
+    if (!overlay) return;
+
+    // Clear panel content
+    overlay.querySelectorAll('div').forEach(el => {
+        el.style.transition = 'opacity 0.2s';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+    });
+
+    const faceImg = overlay.querySelector('img');
+    const allIntervals = [];
+    const t = (fn, ms) => setTimeout(fn, ms);
+
+    // ── PHASE 1: White flicker ──────────────────────────────────────────────
+    const FLICK_COUNT = 5;
+    overlay.style.transition = 'background 0s';
+
+    function doFlicker(remaining, onDone) {
+        if (remaining <= 0) { overlay.style.background = '#fff'; onDone(); return; }
+        overlay.style.background = '#fff';
+        t(() => {
+            overlay.style.background = '#111';
+            t(() => doFlicker(remaining - 1, onDone), 55 + Math.random() * 90);
+        }, 45 + Math.random() * 80);
+    }
+
+    t(() => doFlicker(FLICK_COUNT, startChaosPhase), 200);
+
+    // ── PHASE 2–4: Distortion + words + milkyway ───────────────────────────
+    let nebulaEl = null;
+    let activeWordEls = [];
+    let wordBatchSize = 1;
+    let distortId = null;
+    let wordId = null;
+
+    function spawnWord() {
+        const word = FOS_CHAOS_WORDS[Math.floor(Math.random() * FOS_CHAOS_WORDS.length)];
+        const el = document.createElement('span');
+        const size = 0.55 + Math.random() * 2.8;
+        const colors = ['#111','#fff','#c00','#ff0','#0ff','#f0f','#f80'];
+        el.textContent = word;
+        el.style.cssText = `
+            position: absolute;
+            left: ${Math.random() * 92}%;
+            top: ${Math.random() * 92}%;
+            font-family: var(--font);
+            font-size: ${size}rem;
+            color: ${colors[Math.floor(Math.random() * colors.length)]};
+            opacity: 0;
+            transition: opacity ${0.15 + Math.random() * 0.35}s ease;
+            pointer-events: none;
+            z-index: 6;
+            transform: rotate(${-45 + Math.random() * 90}deg);
+            white-space: nowrap;
+            mix-blend-mode: ${Math.random() > 0.5 ? 'multiply' : 'normal'};
+        `;
+        overlay.appendChild(el);
+        activeWordEls.push(el);
+        requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = String(0.5 + Math.random() * 0.5); }));
+        const life = 600 + Math.random() * 1800;
+        t(() => {
+            el.style.opacity = '0';
+            t(() => { el.remove(); activeWordEls = activeWordEls.filter(w => w !== el); }, 400);
+        }, life);
+    }
+
+    function flashNebula() {
+        if (nebulaEl) return;
+        nebulaEl = document.createElement('img');
+        nebulaEl.src = 'assets/nebula1.png';
+        nebulaEl.style.cssText = `
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.08s ease;
+            z-index: 7;
+            pointer-events: none;
+        `;
+        overlay.appendChild(nebulaEl);
+        requestAnimationFrame(() => requestAnimationFrame(() => { nebulaEl.style.opacity = '1'; }));
+        const hold = 80 + Math.random() * 350;
+        t(() => {
+            if (!nebulaEl) return;
+            nebulaEl.style.opacity = '0';
+            t(() => { nebulaEl && nebulaEl.remove(); nebulaEl = null; }, 150);
+        }, hold);
+    }
+
+    let chaosIntensity = 0; // 0.0 → 1.0, drives how wild distortions get
+
+    function applyDistortion() {
+        if (!faceImg) return;
+        const c = chaosIntensity;
+
+        const hue    = Math.random() < c ? Math.floor(Math.random() * 360) : 0;
+        const sat    = 1 + c * Math.random() * 5;
+        const inv    = Math.random() < c * 0.7 ? 1 : 0;
+        const blurPx = Math.random() < c * 0.5 ? Math.random() * 5 * c : 0;
+        const cont   = 1 + c * Math.random() * 2;
+        const scale  = 1 + (Math.random() - 0.5) * c * 1.2;
+        const rot    = (Math.random() - 0.5) * 80 * c;
+        const skewX  = (Math.random() - 0.5) * 50 * c;
+        const skewY  = (Math.random() - 0.5) * 30 * c;
+
+        faceImg.style.filter    = `hue-rotate(${hue}deg) saturate(${sat}) invert(${inv}) blur(${blurPx}px) contrast(${cont})`;
+        faceImg.style.transform = `scale(${scale}) rotate(${rot}deg) skewX(${skewX}deg) skewY(${skewY}deg)`;
+
+        if (Math.random() < c * 0.25) flashNebula();
+
+        if (Math.random() < c * 0.1) {
+            const bgColors = ['#fff','#000','#300','#330','#003'];
+            overlay.style.background = bgColors[Math.floor(Math.random() * bgColors.length)];
+            t(() => { overlay.style.background = '#fff'; }, 80 + Math.random() * 120);
+        }
+    }
+
+    function setDistortRate(ms) {
+        if (distortId) clearInterval(distortId);
+        distortId = setInterval(applyDistortion, ms);
+        allIntervals.push(distortId);
+    }
+
+    function setWordRate(ms, batch) {
+        if (wordId) clearInterval(wordId);
+        wordBatchSize = batch;
+        wordId = setInterval(() => {
+            for (let i = 0; i < wordBatchSize; i++) spawnWord();
+        }, ms);
+        allIntervals.push(wordId);
+    }
+
+    function startChaosPhase() {
+        overlay.style.background = '#fff';
+
+        if (faceImg) {
+            faceImg.style.transition = 'opacity 0.5s ease, filter 0.09s ease, transform 0.09s ease';
+            faceImg.style.opacity = '1';
+            faceImg.style.transform = 'translateX(0)';
+        }
+
+        // Start very gentle — barely noticeable distortion, no words yet
+        chaosIntensity = 0.05;
+        setDistortRate(800);
+
+        // Gradual ramp schedule
+        // at: ms after startChaosPhase, intensity: 0.0–1.0
+        const schedule = [
+            { at: 3000,  intensity: 0.12, distort: 600,  wordMs: null, batch: 0 },
+            { at: 5500,  intensity: 0.25, distort: 400,  wordMs: 2000, batch: 1 },
+            { at: 8000,  intensity: 0.42, distort: 260,  wordMs: 1100, batch: 2 },
+            { at: 10000, intensity: 0.60, distort: 140,  wordMs: 550,  batch: 3 },
+            { at: 11500, intensity: 0.75, distort: 70,   wordMs: 260,  batch: 5 },
+            { at: 12500, intensity: 0.88, distort: 30,   wordMs: 110,  batch: 8 },
+            { at: 13500, intensity: 1.0,  distort: 10,   wordMs: 40,   batch: 14 },
+        ];
+
+        schedule.forEach(({ at, intensity, distort, wordMs, batch }) => {
+            t(() => {
+                chaosIntensity = intensity;
+                setDistortRate(distort);
+                if (wordMs !== null) setWordRate(wordMs, batch);
+            }, at);
+        });
+
+        // Nebula becomes relentless in the final stretch
+        t(() => {
+            const nId = setInterval(() => { if (Math.random() < 0.6) flashNebula(); }, 220);
+            allIntervals.push(nId);
+        }, 12000);
+
+        // ── PHASE 5: SMPTE bars ───────────────────────────────────────────
+        t(() => {
+            allIntervals.forEach(id => clearInterval(id));
+
+            // Kill words
+            activeWordEls.forEach(el => { el.style.opacity = '0'; t(() => el.remove(), 400); });
+            activeWordEls = [];
+            if (nebulaEl) { nebulaEl.remove(); nebulaEl = null; }
+
+            // Reset face
+            if (faceImg) {
+                faceImg.style.transition = 'opacity 0.15s ease';
+                faceImg.style.opacity = '0';
+                faceImg.style.filter = '';
+                faceImg.style.transform = '';
+            }
+
+            overlay.style.background = '#000';
+
+            // Hard cut to SMPTE bars
+            t(() => {
+                const smpte = document.createElement('img');
+                smpte.src = 'assets/SMPTEbars.png';
+                smpte.style.cssText = `
+                    position: absolute; inset: 0;
+                    width: 100%; height: 100%;
+                    object-fit: cover;
+                    opacity: 1;
+                    z-index: 9;
+                    pointer-events: none;
+                `;
+                overlay.appendChild(smpte);
+
+                // ── PHASE 6: End screen after 4s hold ────────────────────
+                t(() => {
+                    G.customDeathTitle = 'Greedy.';
+                    endGame(false, 'You ended like many others.', 'Greedy.');
+                    t(() => { if (overlay) overlay.remove(); }, 1400);
+                }, 4000);
+
+            }, 120);
+
+        }, 15000);
+    }
+}
+
 function showFosQ2(panel) {
     fosShowPanel(panel, 'Why are you here?', [
         { label: 'I got lost.',     onClick: () => fosSwapToResponse(panel, 'Lost?', () => showFosQ3_goHome(panel)) },
-        { label: "I don't know.",   onClick: () => {} },
+        { label: "I don't know.",   onClick: () => fosSwapToResponse(panel, 'I do not know what brought you here either. I suppose it depends, then.', () => showFosQ_believe(panel)) },
         { label: 'Your knowledge.', onClick: () => {} },
-        { label: 'Your power.',     onClick: () => {} },
+        { label: 'Your power.',     onClick: () => fosSwapToResponse(panel, 'Others have come for my power, but it killed them.', () => {
+            fosShowPanel(panel, 'Do you really want all of it?', [
+                { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'You will regret this.', () => playFosPowerChaoticDeath()) },
+                { label: 'No.',  onClick: () => {} },
+            ]);
+        }) },
     ]);
 }
 
@@ -4725,6 +5309,7 @@ function tpShowResult(rollText, text, effectLines) {
     document.getElementById('ep-choices').innerHTML = '';
     document.getElementById('ep-result').classList.remove('hidden');
     updateStats();
+    if (checkLoss()) return;
     const btn = document.getElementById('ep-continue');
     btn.style.display = '';
     btn.textContent   = 'Continue';
@@ -7080,9 +7665,14 @@ function attemptEscape() {
         addLog('You are not close enough to the edge.', 'danger');
         return;
     }
+    const fosGiftAttrs = ["Cat's Eyes", 'Cloven Feet', 'Long Arms', 'A New Face', 'A Complete Makeover'];
+    const hasChanged = fosGiftAttrs.some(a => G.player.attributes.includes(a));
+
     let msg;
     if (G.player.items.includes('150 Pound Block of Rhodium')) {
         msg = 'You leave the woods with all the money in the world.';
+    } else if (hasChanged) {
+        msg = "But you've changed.";
     } else if (G.fosHelpedEscape) {
         msg = 'You escaped the woods and met something interesting.';
     } else {
@@ -8255,6 +8845,10 @@ function drawPowerCard() {
     if (G.powerCards.length >= 5) return; // hand size limit
     const card = POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)];
     G.powerCards.push({ ...card });
+    if (G.player.attributes.includes('A New Face') && G.powerCards.length < 5) {
+        const bonus = POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)];
+        G.powerCards.push({ ...bonus });
+    }
     renderPowerCards();
 }
 
