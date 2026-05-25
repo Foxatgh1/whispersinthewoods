@@ -20,7 +20,74 @@ const HEX_DIRS = [
 
 // ============================================================
 // POWER CARD DECK
+let _voidGiftAnimInterval = null;
+
 // ============================================================
+// ============================================================
+// INVENTORY TOOLTIPS
+// ============================================================
+const ITEM_TOOLTIPS = {
+    'Flashlight':                   'Boosts Visibility during an encounter. Has 3 uses.',
+    'Weird Rock':                   '+0.1 Strength for your next Strength check. Consumed on use.',
+    'Weird Bone':                   '+0.1 Strength for your next Strength check. Consumed on use.',
+    'Walking Stick':                'Passively grants +0.1 Strength.',
+    'Firestarter':                  'Required for certain encounter choices.',
+    'Eyeglass':                     'A pair of glasses found in the woods.',
+    'Cookie':                       '+1 Health when eaten. Consumed on use.',
+    'Mudball':                      '1 in 10 chance to succeed your next Speed check. One consumed on use.',
+    'Void Gift':                    'Your hand is always refilled to 5 Power Cards.',
+    '150 Pound Block of Rhodium':   'Extremely valuable. Extremely heavy.',
+    'Gun':                          'Auto-succeeds your next Strength check. Consumed on use.',
+    'Empty Gun':                    'The gun is empty. It can still be used as a blunt instrument.',
+    'Wooden Beam':                  'Boosts Strength for your entire current encounter.',
+    'Flamethrower':                 '+0.3 Visibility for your current encounter. Has limited uses.',
+    'Food':                         'Can substitute for Food in certain encounter choices.',
+    'First Aid Kit':                'Restores Health when used.',
+    'Bluebell':                     'Activate to use.',
+    'Phlox Flower':                 'Activate to use.',
+    'Incongruous Staff':            'Activate to use.',
+};
+
+const ATTR_TOOLTIPS = {
+    'Totally Lost':             'Blocks escape. Expires after 10 turns or when you scout.',
+    'Watchless':                'You threw your watch away.',
+    'Ballsy':                   'When you fail a Strength check, 1 in 10 chance to succeed anyway.',
+    'An Energetic Companion':   '1 in 10 chance of +1 Peace of Mind each time you move.',
+    "Cat's Eyes":               '+0.1 Visibility permanently granted.',
+    'Cloven Feet':              '+0.1 Speed permanently granted.',
+    'Long Arms':                '+0.1 Strength permanently granted.',
+    'A New Face':               'Each time you draw a Power Card, you draw an additional one.',
+    'A Complete Makeover':      'Two characteristics were permanently boosted; one was reduced.',
+    'Maddening Beauty':         '+0.3 Visibility, +0.1 Strength & Speed. Peace of Mind cannot exceed 6.',
+    'Covered in Mud':           '-0.1 Speed. Came with 10 Mudballs.',
+    'Desecrator':               '1 in 2 chance any drawn Power Card becomes Damnation.',
+    'Ecocidal':                 'Drawn reveal cards become remove cards instead.',
+    'Honest':                   'No effect.',
+    'Longing':                  'No effect yet.',
+    'Tainted by Carcinogens':   'No effect yet.',
+    'Ascended':                 'No effect yet.',
+};
+
+function attachTooltip(el, text) {
+    if (!text) return;
+    const tip = document.getElementById('inv-tooltip');
+    el.addEventListener('click', () => tip.classList.add('hidden'));
+    el.addEventListener('mouseenter', () => {
+        tip.textContent = text;
+        tip.classList.remove('hidden');
+        const rect = el.getBoundingClientRect();
+        tip.style.left = (rect.right + 8) + 'px';
+        tip.style.top  = rect.top + 'px';
+        requestAnimationFrame(() => {
+            const tr = tip.getBoundingClientRect();
+            if (tr.bottom > window.innerHeight - 4) {
+                tip.style.top = (window.innerHeight - tr.height - 4) + 'px';
+            }
+        });
+    });
+    el.addEventListener('mouseleave', () => tip.classList.add('hidden'));
+}
+
 const POWER_CARDS = [
     // ── Stat boosts: single stat, +amount, next check ─────────────────────
     { id: 'good_friction',            name: 'Good Friction',                              type: 'boost',            stat: 'speed',      amount: 0.1, description: '+0.1 Speed for your next check.' },
@@ -3068,6 +3135,7 @@ function newGameState() {
         momentOfClarityCards: null,  // 5 cards shown in the Moment of Clarity modal
         momentOfClarityPicks: 0,     // how many picks taken in Moment of Clarity
         weirdRockQueued:      false,   // true after player activates the rock; consumed on next strength roll
+        mudballQueued:        false,   // true after player activates a Mudball; consumed on next speed roll
         gunQueued:         false,   // true after player activates the Gun; auto-succeeds next strength check
         gunUses:           0,       // remaining uses on the Gun item
         woodenBeamActive:    false,  // true while Wooden Beam is active; boosts all strength rolls this encounter
@@ -3092,7 +3160,8 @@ function newGameState() {
         thirdPartyPlacated:  0,    // times the Third Party has been placated this encounter
         thirdPartyFedIt:     false, // Feed It can only be used once per encounter
         thirdPartyTriggered: false, // prevents stalked-path from firing more than once
-        fosHelpedEscape:     false  // Face of Stone guided the player home
+        fosHelpedEscape:     false, // Face of Stone guided the player home
+        peacefulWoods:       false  // Face restored the forest; all hexes become peaceful
     };
 }
 
@@ -3126,6 +3195,7 @@ function initGame() {
     }
 
     placeLeafTokens();
+    placeFaceOfStone();
 
     // Player starts at center hex — no encounter on starting tile
     G.board[hk(0, 0)].visited = true;
@@ -3163,6 +3233,23 @@ function placeLeafTokens() {
             }
         }
     }
+}
+
+function placeFaceOfStone() {
+    const fos    = ENCOUNTERS[4].find(e => e.id === 'face_of_stone');
+    const nonFos = ENCOUNTERS[4].filter(e => e.id !== 'face_of_stone');
+    const keys   = Object.keys(G.board);
+
+    // Strip any FOS encounters assigned during random init, replace with non-FOS
+    keys.forEach(k => {
+        if (G.board[k].encounters[4].id === 'face_of_stone') {
+            G.board[k].encounters[4] = nonFos[Math.floor(Math.random() * nonFos.length)];
+        }
+    });
+
+    // Place FOS on exactly one random hex
+    const pick = keys[Math.floor(Math.random() * keys.length)];
+    G.board[pick].encounters[4] = fos;
 }
 
 function placeReplacementLeaf() {
@@ -3312,7 +3399,8 @@ function renderBoard() {
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', x);
         label.setAttribute('y', y);
-        label.setAttribute('class', 'level-label');
+        const isOminous = lvl === 4 && hex.encounters[4].id !== 'face_of_stone';
+        label.setAttribute('class', 'level-label' + (isOminous ? ' lvl-ominous' : ''));
         label.setAttribute('fill', lvl >= 3 ? '#cccccc' : '#555555');
         label.textContent = lvl;
 
@@ -3351,7 +3439,7 @@ function onHexClick(q, r) {
 
     // Departure: remove the top tile from the hex the player is leaving
     const prevHex = G.board[hk(prevQ, prevR)];
-    if (prevHex.currentLevel < 4) {
+    if (!G.peacefulWoods && prevHex.currentLevel < 4) {
         prevHex.currentLevel++;
     }
 
@@ -3395,6 +3483,11 @@ function onHexClick(q, r) {
 // ENCOUNTER SYSTEM
 // ============================================================
 function triggerEncounter(hex) {
+    if (G.peacefulWoods) {
+        showPeacefulEncounter(hex.encounters[1]);
+        return;
+    }
+
     const encounter = G.pendingLeaf
         ? (hex.currentLevel === 1 ? LEAF_ENCOUNTER : LEAF_ENCOUNTER_DEFAULT)
         : hex.encounters[hex.currentLevel];
@@ -3771,7 +3864,9 @@ function fosGrantHomeEscape() {
 }
 
 // Placeholder hooks — wired when Q2 "Your knowledge." and "Your power." are built
-function showFosKnowledge(panel) { /* TBD */ }
+function showFosKnowledge(panel) {
+    fosSwapToResponse(panel, 'I am sure you have many questions.', () => showFosKnowledgeCurrent(panel));
+}
 function showFosPower(panel)     { /* TBD */ }
 
 function showFosPeace(panel) {
@@ -3855,6 +3950,86 @@ function showFosCloseOverlay() {
     renderBoard();
 }
 
+function enterPeacefulWoods() {
+    const keys = Object.keys(G.board);
+    const shuffled = shuffle([...PEACEFUL_ENCOUNTERS]);
+    keys.forEach((key, i) => {
+        const enc = shuffled[i % shuffled.length];
+        G.board[key].encounters[1] = enc;
+        G.board[key].currentLevel  = 1;
+        G.board[key].leafLevels    = [];
+        G.board[key].collectedLevels = [];
+    });
+    G.peacefulWoods = true;
+    G.canEscape     = true;
+    showFosCloseOverlay();
+    setTimeout(showPeacefulWoodsText, 1600);
+}
+
+function showPeacefulWoodsText() {
+    const box = document.createElement('div');
+    box.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        border: 1.5px solid #ccc;
+        padding: 28px 36px;
+        max-width: 380px;
+        text-align: center;
+        font-family: var(--font);
+        font-size: 0.95rem;
+        color: #333;
+        line-height: 1.7;
+        z-index: 200;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+        cursor: pointer;
+    `;
+    box.textContent = 'You wake up to a warm sunrise. The woods still circle you, but their menace is gone.';
+    document.body.appendChild(box);
+    requestAnimationFrame(() => requestAnimationFrame(() => { box.style.opacity = '1'; }));
+    const dismiss = () => {
+        box.style.opacity = '0';
+        setTimeout(() => box.remove(), 900);
+    };
+    box.addEventListener('click', dismiss);
+    setTimeout(dismiss, 6000);
+}
+
+function showPeacefulEncounter(encounter) {
+    document.getElementById('ep-idle').style.display = 'none';
+    document.getElementById('ep-badge').textContent  = '';
+    document.getElementById('ep-result').classList.add('hidden');
+
+    const titleEl   = document.getElementById('ep-title');
+    const descEl    = document.getElementById('ep-description');
+    const choicesEl = document.getElementById('ep-choices');
+
+    titleEl.className = '';
+    descEl.className  = '';
+    titleEl.style.opacity = '0';
+    descEl.style.opacity  = '0';
+    choicesEl.innerHTML   = '';
+
+    titleEl.textContent = encounter.title;
+    descEl.textContent  = encounter.description;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        titleEl.style.transition = 'opacity 0.6s ease';
+        descEl.style.transition  = 'opacity 0.6s ease';
+        titleEl.style.opacity = '1';
+        descEl.style.opacity  = '1';
+    }));
+
+    setTimeout(() => {
+        document.getElementById('ep-roll').textContent = '';
+        showResultText('', []);
+        document.getElementById('ep-result').classList.remove('hidden');
+    }, 700);
+}
+
 function showFosGiveRhodium(panel) {
     fosSwapToResponse(panel, 'Value? I will give you value.', () => {
         G.player.items.push('150 Pound Block of Rhodium');
@@ -3879,6 +4054,14 @@ function showFosQ4_noMoney(panel) {
         { label: 'Your power.',     onClick: () => showFosPower(panel) },
         { label: 'Peace.',          onClick: () => showFosPeace(panel) },
         { label: 'No.',             onClick: () => fosSwapToResponse(panel, 'Then depart. I see no reason for you to remain.', () => showFosCloseOverlay()) },
+    ]);
+}
+
+function showFosQ4_noKnowledge(panel) {
+    fosShowPanel(panel, 'Is there something else you want?', [
+        { label: 'Your power.', onClick: () => showFosPower(panel) },
+        { label: 'Peace.',      onClick: () => showFosPeace(panel) },
+        { label: 'No.',         onClick: () => fosSwapToResponse(panel, 'Then depart. I see no reason for you to remain.', () => showFosCloseOverlay()) },
     ]);
 }
 
@@ -5071,15 +5254,464 @@ function playFosPowerChaoticDeath() {
     }
 }
 
+function showFosFractionCrossfade(overlay, box, prevImg, newSrc, narrativeText, questionText, choices) {
+    box.style.opacity = '0';
+
+    const newImgZ = parseInt(prevImg.style.zIndex || 2) + 1;
+    const newImg = document.createElement('img');
+    newImg.src = newSrc;
+    newImg.style.cssText = `
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 1.2s ease;
+        z-index: ${newImgZ};
+        pointer-events: none;
+    `;
+    box.style.zIndex = String(newImgZ + 1);
+    overlay.appendChild(newImg);
+    requestAnimationFrame(() => requestAnimationFrame(() => { newImg.style.opacity = '1'; }));
+    setTimeout(() => { prevImg.style.opacity = '0'; setTimeout(() => prevImg.remove(), 1300); }, 400);
+
+    setTimeout(() => {
+        box.innerHTML = '';
+        box.style.fontStyle = 'italic';
+        box.style.cursor = 'default';
+
+        const narrative = document.createElement('div');
+        narrative.textContent = narrativeText;
+        narrative.style.cssText = 'margin-bottom: 22px;';
+        box.appendChild(narrative);
+
+        if (questionText) {
+            const q = document.createElement('div');
+            q.textContent = questionText;
+            q.style.cssText = 'font-weight: bold; font-style: normal; font-size: 1.05rem; margin-bottom: 18px; color: #222;';
+            box.appendChild(q);
+        }
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display: flex; gap: 14px; justify-content: center;';
+        choices.forEach(({ label, onClick }) => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = label;
+            btn.style.cssText = 'width: auto; min-width: 80px;';
+            btn.addEventListener('click', () => {
+                btnRow.querySelectorAll('button').forEach(b => b.disabled = true);
+                onClick(newImg);
+            });
+            btnRow.appendChild(btn);
+        });
+
+        box.appendChild(btnRow);
+        requestAnimationFrame(() => requestAnimationFrame(() => { box.style.opacity = '1'; }));
+    }, 900);
+}
+
+function showFosFractionWeighted(overlay, box, prevForestImg) {
+    showFosFractionCrossfade(
+        overlay, box, prevForestImg,
+        'assets/abovethetreetops2.png',
+        "You turn, ready to soar away, but can't. Something is weighing you down despite your buoyancy.",
+        'Do you pull harder?',
+        [
+            { label: 'Yes.', onClick: (img) => showFosFractionLookDown(overlay, box, img, "You strain harder at your bonds, to no avail. Something is keeping you down, something that isn't yours.") },
+            { label: 'No.',  onClick: (img) => showFosFractionLookDown(overlay, box, img, 'This sensation is all new. Perhaps you are doing something wrong.') },
+        ]
+    );
+}
+
+function showFosFractionLookDown(overlay, box, prevImg, narrativeText) {
+    showFosFractionCrossfade(
+        overlay, box, prevImg,
+        'assets/abovethetreetops3.png',
+        narrativeText,
+        'Do you dare look down?',
+        [
+            { label: 'Yes.', onClick: (img) => showFosFractionGatherThoughts(overlay, box, img, 'You gaze down and see nothing but foliage below.') },
+            { label: 'No.',  onClick: (img) => showFosFractionGatherThoughts(overlay, box, img, 'You keep your eyes focused on the horizon. Blurry shapes are appearing in the distance.') },
+        ]
+    );
+}
+
+function showFosFractionGatherThoughts(overlay, box, prevImg, narrativeText) {
+    showFosFractionCrossfade(
+        overlay, box, prevImg,
+        'assets/abovethetreetops4.png',
+        narrativeText,
+        'Do you gather your thoughts?',
+        [
+            { label: 'Yes.', onClick: (img) => showFosFractionPanic(overlay, box, img) },
+            { label: 'No.',  onClick: (img) => showFosFractionPanic(overlay, box, img) },
+        ]
+    );
+}
+
+function showFosFractionPanic(overlay, box, prevImg) {
+    showFosFractionCrossfade(
+        overlay, box, prevImg,
+        'assets/abovethetreetops5.png',
+        'You...huh...? A large crowd of something is rapidly approaching your position in the sky.',
+        'What do you do?',
+        [
+            { label: 'Panic.', onClick: (img) => showFosFractionSubmit(overlay, box, img) },
+            { label: 'Panic.', onClick: (img) => showFosFractionSubmit(overlay, box, img) },
+        ]
+    );
+}
+
+function showFosFractionTaken(overlay, box, prevImg) {
+    box.style.opacity = '0';
+
+    const takenImgZ = parseInt(prevImg.style.zIndex || 2) + 1;
+    const newImg = document.createElement('img');
+    newImg.src = 'assets/abovethetreetops7.png';
+    newImg.style.cssText = `
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 1.4s ease;
+        z-index: ${takenImgZ};
+        pointer-events: none;
+    `;
+    box.style.zIndex = String(takenImgZ + 1);
+    overlay.appendChild(newImg);
+    requestAnimationFrame(() => requestAnimationFrame(() => { newImg.style.opacity = '1'; }));
+    setTimeout(() => { prevImg.style.opacity = '0'; setTimeout(() => prevImg.remove(), 1400); }, 400);
+
+    setTimeout(() => {
+        box.innerHTML = '';
+        box.style.cursor = 'default';
+        box.textContent = 'They are on top of you, grabbing, feeling, whispering, worshipping. A powerful chlorine smell overwhelms your senses and your consciousness falters. You hardly notice as the stars come whooshing toward you, taking you far, far beyond the treetops.';
+        requestAnimationFrame(() => requestAnimationFrame(() => { box.style.opacity = '1'; }));
+
+        setTimeout(() => {
+            box.style.opacity = '0';
+            setTimeout(() => {
+                const fosOverlay = document.getElementById('fos-overlay');
+                endGame(false, 'You are an altar.', 'Taken.');
+                setTimeout(() => { if (fosOverlay) fosOverlay.remove(); }, 1400);
+            }, 800);
+        }, 6000);
+    }, 1000);
+}
+
+function showFosFractionSubmit(overlay, box, prevImg) {
+    showFosFractionCrossfade(
+        overlay, box, prevImg,
+        'assets/abovethetreetops6.png',
+        'You struggle, desperately seeking a way to return to the ground before they can finally grab you.',
+        '',
+        [
+            { label: 'Submit.', onClick: (img) => showFosFractionTaken(overlay, box, img) },
+        ]
+    );
+}
+
+function showFosFractionScene(panel) {
+    const overlay = document.getElementById('fos-overlay');
+    if (!overlay) return;
+
+    // Fade out panel and face image
+    panel.style.transition = 'opacity 0.8s ease';
+    panel.style.opacity = '0';
+    const faceImg = overlay.querySelector('img');
+    if (faceImg) { faceImg.style.transition = 'opacity 0.8s ease'; faceImg.style.opacity = '0'; }
+
+    // Transition overlay to black
+    overlay.style.transition = 'background 1.2s ease';
+    overlay.style.background = '#000';
+
+    setTimeout(() => {
+        // Forest image fills overlay
+        const forestImg = document.createElement('img');
+        forestImg.src = 'assets/abovethetreetops.png';
+        forestImg.style.cssText = `
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.4s ease;
+            z-index: 2;
+            pointer-events: none;
+        `;
+        overlay.appendChild(forestImg);
+        requestAnimationFrame(() => requestAnimationFrame(() => { forestImg.style.opacity = '1'; }));
+
+        // White text box appears after forest fades in
+        setTimeout(() => {
+            const box = document.createElement('div');
+            box.style.cssText = `
+                position: absolute;
+                top: 50%; left: 50%;
+                transform: translate(-50%, -50%);
+                background: #fff;
+                padding: 28px 36px;
+                max-width: 46%;
+                text-align: center;
+                font-family: var(--font);
+                font-size: 0.95rem;
+                color: #222;
+                line-height: 1.65;
+                font-style: italic;
+                opacity: 0;
+                transition: opacity 0.8s ease;
+                z-index: 5;
+                cursor: pointer;
+            `;
+            box.textContent = 'Your body feels light and you feel yourself rise up toward the stars. The burdens of the Face do not afflict your conscience and you are now...freer than it.';
+            overlay.appendChild(box);
+            requestAnimationFrame(() => requestAnimationFrame(() => { box.style.opacity = '1'; }));
+
+            function showDirectionChoice() {
+                clearTimeout(autoTimer);
+                box.removeEventListener('click', showDirectionChoice);
+                box.style.opacity = '0';
+                setTimeout(() => {
+                    box.style.fontStyle = 'normal';
+                    box.style.cursor = 'default';
+                    box.innerHTML = '';
+
+                    const q = document.createElement('div');
+                    q.textContent = 'Where do you turn from here?';
+                    q.style.cssText = 'font-weight: bold; font-size: 1.05rem; margin-bottom: 20px; color: #222;';
+                    box.appendChild(q);
+
+                    const btnRow = document.createElement('div');
+                    btnRow.style.cssText = 'display: flex; gap: 14px; justify-content: center;';
+
+                    ['Left.', 'Right.'].forEach(label => {
+                        const btn = document.createElement('button');
+                        btn.className = 'choice-btn';
+                        btn.textContent = label;
+                        btn.style.cssText = 'width: auto; min-width: 80px;';
+                        btn.addEventListener('click', () => {
+                            btnRow.querySelectorAll('button').forEach(b => b.disabled = true);
+                            showFosFractionWeighted(overlay, box, forestImg);
+                        });
+                        btnRow.appendChild(btn);
+                    });
+
+                    box.appendChild(btnRow);
+                    requestAnimationFrame(() => requestAnimationFrame(() => { box.style.opacity = '1'; }));
+                }, 700);
+            }
+
+            box.addEventListener('click', showDirectionChoice);
+            const autoTimer = setTimeout(showDirectionChoice, 5000);
+        }, 2000);
+
+    }, 900);
+}
+
+function playFosKnowledgeRedDeath() {
+    const overlay = document.getElementById('fos-overlay');
+    const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.?~';
+
+    // Red curtain drops from top
+    const curtain = document.createElement('div');
+    curtain.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0;
+        height: 0;
+        background: #7a0000;
+        z-index: 320;
+        transition: height 1.6s ease-in;
+    `;
+    document.body.appendChild(curtain);
+    requestAnimationFrame(() => requestAnimationFrame(() => { curtain.style.height = '100vh'; }));
+
+    // Letters erupt and fill the screen
+    const letterInterval = setInterval(() => {
+        for (let i = 0; i < 10; i++) {
+            const span = document.createElement('span');
+            span.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+            span.style.cssText = `
+                position: fixed;
+                left: ${Math.random() * 100}vw;
+                top: ${Math.random() * 100}vh;
+                font-family: var(--font);
+                font-size: ${0.7 + Math.random() * 2.2}rem;
+                color: ${Math.random() > 0.5 ? '#fff' : '#ffbbbb'};
+                z-index: 325;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.15s ease;
+                transform: rotate(${-30 + Math.random() * 60}deg);
+                white-space: nowrap;
+            `;
+            document.body.appendChild(span);
+            requestAnimationFrame(() => requestAnimationFrame(() => { span.style.opacity = '1'; }));
+            setTimeout(() => { span.style.opacity = '0'; setTimeout(() => span.remove(), 300); }, 300 + Math.random() * 800);
+        }
+    }, 70);
+
+    setTimeout(() => {
+        clearInterval(letterInterval);
+        endGame(false, 'You ended like many others.', 'Greedy.');
+        setTimeout(() => {
+            curtain.remove();
+            if (overlay) overlay.remove();
+        }, 1400);
+    }, 3500);
+}
+
+function showFosKnowledgeCurrent(panel) {
+    if (!G.fosKnowledgeAsked) G.fosKnowledgeAsked = {};
+    const opts = [];
+    if (!G.fosKnowledgeAsked.whatAreYou)      opts.push({ label: 'What are you?',                   onClick: () => showFosWhatAreYou(panel) });
+    if (!G.fosKnowledgeAsked.whereAmI)        opts.push({ label: 'Where am I?',                     onClick: () => showFosWhereAmI(panel) });
+    if (!G.fosKnowledgeAsked.whatIsHappening) opts.push({ label: 'What is happening to the woods?', onClick: () => {
+        if (!G.fosKnowledgeAsked) G.fosKnowledgeAsked = {};
+        G.fosKnowledgeAsked.whatIsHappening = true;
+        fosSwapToResponse(panel, 'I do not know.', () => showFosKnowledgeCurrent(panel));
+    }});
+    opts.push({ label: 'How do I leave this place?', onClick: () => fosSwapToResponse(panel, 'Back the way you came, though I suppose that isn\'t very helpful.', () => {
+        fosShowPanel(panel, 'Do you need help?', [
+            { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'I will help you.', () => {
+                G.player.leafTokens = 3;
+                G.fosHelpedEscape   = true;
+                G.canEscape         = true;
+                updateLeafDisplay();
+                showFosCloseOverlay();
+            }) },
+            { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Then I will not help you.', () => showFosCloseOverlay()) },
+        ]);
+    }) });
+    opts.push({ label: 'I have learned enough.',      onClick: () => fosSwapToResponse(panel, 'Very well.', () => showFosQ4_noKnowledge(panel)) });
+    fosShowPanel(panel, 'What would you like to know?', opts);
+}
+
+function showFosKnowledgeIsAll3(panel) {
+    fosShowPanel(panel, 'Is that all?', [
+        { label: 'Does it sadden you to be here?', onClick: () => fosSwapToResponse(panel, 'I...do not think I feel sadness like you...', () => {
+            fosSwapToResponse(panel, '...', () => {
+                fosSwapToResponse(panel, 'I do not like these questions. Ask me something else.', () => showFosKnowledgeCurrent(panel));
+            });
+        }) },
+        { label: 'Yes, that is all.',               onClick: () => showFosKnowledgeCurrent(panel) },
+    ]);
+}
+
+function showFosKnowledgeIsAll2(panel) {
+    fosShowPanel(panel, 'Is that all?', [
+        { label: 'If you are so small, then what am I to you?', onClick: () => fosSwapToResponse(panel, 'I do not know you well. I won\'t cast judgment on you.', () => showFosKnowledgeIsAll3(panel)) },
+        { label: 'Where do you come from originally?',          onClick: () => fosSwapToResponse(panel, 'I was born on what you call MoM-z14, but I inhabited Ursa Major III and later the Andromeda galaxy in my waning years. I miss them, but they don\'t boast the...accommodations afforded by Sol III.', () => showFosKnowledgeIsAll3(panel)) },
+        { label: 'Yes, that is all.',                           onClick: () => showFosKnowledgeCurrent(panel) },
+    ]);
+}
+
+function showFosWhatAreYou(panel) {
+    if (!G.fosKnowledgeAsked) G.fosKnowledgeAsked = {};
+    G.fosKnowledgeAsked.whatAreYou = true;
+    fosSwapToResponse(panel, 'I am weak. I am nothing. I am sand on the waves of nebula.', () => {
+        fosShowPanel(panel, 'Is that all?', [
+            { label: 'What kind of being are you?',                onClick: () => fosSwapToResponse(panel, 'Ah, that is what you meant. It does not concern you.', () => showFosKnowledgeIsAll2(panel)) },
+            { label: "What do you mean by 'weak' and 'nothing'?", onClick: () => fosSwapToResponse(panel, 'I am not what I once was. I lie here without a star to my name. At least this world is temperate.', () => showFosKnowledgeIsAll2(panel)) },
+            { label: 'Do you wish that you were more?',            onClick: () => fosSwapToResponse(panel, 'Sometimes.', () => {
+                fosShowPanel(panel, 'Do you really need to know more about this?', [
+                    { label: 'Yes, what do you mean by sometimes?',        onClick: () => fosSwapToResponse(panel, 'Nostalgia, nothing else.', () => {
+                        fosShowPanel(panel, 'Is that enough for you?', [
+                            { label: 'No, tell me more.',   onClick: () => fosSwapToResponse(panel, 'About what? About my failures, my ruin, my incapacitation? Why ask me these things? Why push on?', () => {
+                                fosShowPanel(panel, '...', [
+                                    { label: 'Tell me about your failures.',        onClick: () => fosSwapToResponse(panel, 'I did not anticipate my own mortality.', () => fosShowPanel(panel, '...', [{ label: 'Is that all?', onClick: () => fosSwapToResponse(panel, 'No, there is more.', () => playFosKnowledgeRedDeath()) }])) },
+                                    { label: 'Tell me about your ruin.',            onClick: () => fosSwapToResponse(panel, 'I once had many mansions and now I have none but this dirt floor.', () => fosShowPanel(panel, '...', [{ label: 'Is that all?', onClick: () => fosSwapToResponse(panel, 'No, there is more.', () => playFosKnowledgeRedDeath()) }])) },
+                                    { label: 'Tell me about your incapacitation.',  onClick: () => fosSwapToResponse(panel, 'A damnable species I could do nothing about. One still haunts me.', () => fosShowPanel(panel, '...', [{ label: 'Is that all?', onClick: () => fosSwapToResponse(panel, 'No, there is more.', () => playFosKnowledgeRedDeath()) }])) },
+                                    { label: "I won't push you further.",           onClick: () => fosSwapToResponse(panel, 'Good.', () => showFosKnowledgeCurrent(panel)) },
+                                ]);
+                            }) },
+                            { label: "Yes, that's enough.", onClick: () => fosSwapToResponse(panel, 'Good.', () => showFosKnowledgeCurrent(panel)) },
+                        ]);
+                    }) },
+                    { label: 'No, I am done with this line of questions.', onClick: () => fosSwapToResponse(panel, 'Good.', () => showFosKnowledgeCurrent(panel)) },
+                ]);
+            }) },
+            { label: 'Yes, that is all.', onClick: () => showFosKnowledgeCurrent(panel) },
+        ]);
+    });
+}
+
+const FOS_FOREST_DESCS = [
+    'The trees are covered in leaves that grow in the springtime, fall during autumn, and are barren in the winter.',
+    "When it's summer, fireflies zip around in the clearings and meadows, making it seem like the world is full of stars.",
+    'The birds sing lovely tunes in the morning and flit from tree to tree almost lazily.',
+    'At night, all is still, and yet the world is full of life.',
+];
+
+function showFosForestDescription(panel, remaining, pickCount) {
+    const FACE_RESPONSES = [
+        'Oh, really?',
+        'That sounds beautiful.',
+        'What an incredible experience.',
+        'This is such a good world.',
+    ];
+
+    const question = pickCount === 0
+        ? "What do normal forests look like? I can't even remember the appearance of this one back when I arrived."
+        : 'Tell me more.';
+
+    const opts = remaining.map(desc => ({
+        label: desc,
+        onClick: () => {
+            const newRemaining = remaining.filter(d => d !== desc);
+            const response = FACE_RESPONSES[Math.min(pickCount, FACE_RESPONSES.length - 1)];
+            if (newRemaining.length === 0) {
+                fosSwapToResponse(panel, response, () => {
+                    fosSwapToResponse(panel, "I can restore this place's original beauty.", () => {
+                        fosShowPanel(panel, 'Do you want me to do so?', [
+                            { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'Alright.', () => enterPeacefulWoods()) },
+                            { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Alright.', () => showFosKnowledgeCurrent(panel)) },
+                        ]);
+                    });
+                });
+            } else {
+                fosSwapToResponse(panel, response, () => showFosForestDescription(panel, newRemaining, pickCount + 1));
+            }
+        }
+    }));
+
+    if (pickCount > 0) {
+        opts.push({ label: 'No.', onClick: () => fosSwapToResponse(panel, 'Alright.', () => showFosKnowledgeCurrent(panel)) });
+    }
+
+    fosShowPanel(panel, question, opts);
+}
+
+function showFosWhereAmI(panel) {
+    if (!G.fosKnowledgeAsked) G.fosKnowledgeAsked = {};
+    G.fosKnowledgeAsked.whereAmI = true;
+    fosSwapToResponse(panel, 'You are in the forests of West Virginia.', () => {
+        fosShowPanel(panel, 'Surely my influence can\'t have extended that far...', [
+            { label: 'I guess you are right.',                             onClick: () => fosSwapToResponse(panel, 'Any more questions?', () => showFosKnowledgeCurrent(panel)) },
+            { label: "These don't look like any woods I have ever seen.", onClick: () => fosSwapToResponse(panel, "I wouldn't know what the woods you have seen look like. I only know these.", () => showFosForestDescription(panel, FOS_FOREST_DESCS, 0)) },
+        ]);
+    });
+}
+
 function showFosQ2(panel) {
     fosShowPanel(panel, 'Why are you here?', [
         { label: 'I got lost.',     onClick: () => fosSwapToResponse(panel, 'Lost?', () => showFosQ3_goHome(panel)) },
         { label: "I don't know.",   onClick: () => fosSwapToResponse(panel, 'I do not know what brought you here either. I suppose it depends, then.', () => showFosQ_believe(panel)) },
-        { label: 'Your knowledge.', onClick: () => {} },
+        { label: 'Your knowledge.', onClick: () => fosSwapToResponse(panel, 'I am sure you have many questions.', () => showFosKnowledgeCurrent(panel)) },
         { label: 'Your power.',     onClick: () => fosSwapToResponse(panel, 'Others have come for my power, but it killed them.', () => {
             fosShowPanel(panel, 'Do you really want all of it?', [
                 { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'You will regret this.', () => playFosPowerChaoticDeath()) },
-                { label: 'No.',  onClick: () => {} },
+                { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'I thought not, though I doubt you will be thrilled with even a fraction of my power either.', () => {
+                    fosShowPanel(panel, 'Shall I give you a fraction then?', [
+                        { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'I will give you what you can handle.', () => showFosFractionScene(panel)) },
+                        { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Hmm, then I will impart you the minimum I can give.', () => {
+                            G.player.items.push('Void Gift');
+                            while (G.powerCards.length < 5) {
+                                G.powerCards.push({ ...POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)] });
+                            }
+                            renderPowerCards();
+                            updateStats();
+                            showFosCloseOverlay();
+                        }) },
+                    ]);
+                }) },
             ]);
         }) },
     ]);
@@ -5516,6 +6148,48 @@ function showStrengthBoostPrompt(itemName) {
 }
 
 function showWeirdRockPrompt() { showStrengthBoostPrompt('Weird Rock'); }
+
+function showMudballPrompt() {
+    const box = document.getElementById('items-box');
+    box.classList.add('items-box-prompt');
+    box.innerHTML = '';
+
+    const question = document.createElement('p');
+    question.style.cssText = 'margin:0 0 4px; font-size:13px;';
+    question.textContent = '1 in 10 chance to succeed your next Speed check?';
+
+    const warning = document.createElement('p');
+    warning.style.cssText = 'margin:0 0 8px; font-size:11px; color:#888; font-style:italic;';
+    warning.textContent = 'One Mudball will be consumed.';
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex; gap:6px;';
+
+    const yesBtn = document.createElement('button');
+    yesBtn.className = 'item-prompt-btn';
+    yesBtn.textContent = 'Yes';
+    yesBtn.addEventListener('click', () => {
+        const ri = G.player.items.indexOf('Mudball');
+        if (ri !== -1) G.player.items.splice(ri, 1);
+        G.mudballQueued = true;
+        box.classList.remove('items-box-prompt');
+        updateStats();
+    });
+
+    const noBtn = document.createElement('button');
+    noBtn.className = 'item-prompt-btn';
+    noBtn.textContent = 'No';
+    noBtn.addEventListener('click', () => {
+        box.classList.remove('items-box-prompt');
+        updateInventory();
+    });
+
+    btnRow.appendChild(yesBtn);
+    btnRow.appendChild(noBtn);
+    box.appendChild(question);
+    box.appendChild(warning);
+    box.appendChild(btnRow);
+}
 
 function showCookiePrompt() {
     const box = document.getElementById('items-box');
@@ -6083,9 +6757,16 @@ function showResultText(text, effectLines) {
 }
 
 // If player has Ballsy and a Strength check just failed, roll d10: on 10 it succeeds instead.
+// If player has a Mudball queued and this is a Speed check, roll d10: on 10 it succeeds instead.
 function tryBallsy(stat, success, rollLine) {
     if (!success && stat === 'strength' && G.player.attributes.includes('Ballsy') && rollD10() === 10) {
         return { success: true, rollLine: rollLine + ' (Ballsy!)' };
+    }
+    if (stat === 'speed' && G.mudballQueued) {
+        G.mudballQueued = false;
+        if (!success && rollD10() === 10) {
+            return { success: true, rollLine: rollLine + ' (Mudball!)' };
+        }
     }
     return { success, rollLine };
 }
@@ -6355,6 +7036,12 @@ function continueAfterEncounter() {
 }
 
 function postEncounterCleanup() {
+    if (G.peacefulWoods) {
+        G.canEscape = true;
+        renderBoard();
+        updateStats();
+        return;
+    }
     const isTotallyLost = G.player.attributes.includes('Totally Lost');
     if (G.player.leafTokens >= 3 && !isTotallyLost) {
         G.canEscape = true;
@@ -7479,7 +8166,8 @@ function applyEffects(effects) {
             lines.push(delta < 0 ? `Health ${delta}` : `Health +${delta}`);
 
         } else if (stat === 'peaceOfMind') {
-            G.player.peaceOfMind = clamp(G.player.peaceOfMind + delta, 0, 12);
+            const pomCap = G.player.attributes.includes('Maddening Beauty') ? 6 : 12;
+            G.player.peaceOfMind = clamp(G.player.peaceOfMind + delta, 0, pomCap);
             lines.push(delta < 0 ? `Peace of Mind ${delta}` : `Peace of Mind +${delta}`);
 
         } else if (stat === 'knowledge') {
@@ -7611,6 +8299,16 @@ function applyEffects(effects) {
                     G.totallyLostTurns = 10;
                     G.canEscape = false;
                 }
+                if (delta === 'Maddening Beauty') {
+                    G.player.visibility   = parseFloat((G.player.visibility + 0.3).toFixed(1));
+                    G.player.strength     = parseFloat((G.player.strength   + 0.1).toFixed(1));
+                    G.player.speed        = parseFloat((G.player.speed      + 0.1).toFixed(1));
+                    G.player.peaceOfMind  = Math.min(G.player.peaceOfMind, 6);
+                }
+                if (delta === 'Covered in Mud') {
+                    G.player.speed = parseFloat((G.player.speed - 0.1).toFixed(1));
+                    for (let i = 0; i < 10; i++) G.player.items.push('Mudball');
+                }
             }
             lines.push(`Gained attribute: ${delta}`);
 
@@ -7665,6 +8363,11 @@ function attemptEscape() {
         addLog('You are not close enough to the edge.', 'danger');
         return;
     }
+    if (G.peacefulWoods) {
+        endGame(true, 'You set things right.', 'Escaped.');
+        return;
+    }
+
     const fosGiftAttrs = ["Cat's Eyes", 'Cloven Feet', 'Long Arms', 'A New Face', 'A Complete Makeover'];
     const hasChanged = fosGiftAttrs.some(a => G.player.attributes.includes(a));
 
@@ -7740,10 +8443,34 @@ function updateInventory() {
     const itemsBox = document.getElementById('items-box');
     itemsBox.classList.remove('items-box-prompt');
     itemsBox.innerHTML = '';
+    if (_voidGiftAnimInterval) { clearInterval(_voidGiftAnimInterval); _voidGiftAnimInterval = null; }
+    const VOID_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?~`';
+    let mudballRendered = false;
     G.player.items.forEach(item => {
+        if (item === 'Mudball') {
+            if (mudballRendered) return;
+            mudballRendered = true;
+            const mudCount = G.player.items.filter(i => i === 'Mudball').length;
+            const div = document.createElement('div');
+            div.className = 'inventory-item inventory-item-usable';
+            div.textContent = `Mudball (${mudCount})${G.mudballQueued ? ' ●' : ''}`;
+            div.addEventListener('click', showMudballPrompt);
+            attachTooltip(div, ITEM_TOOLTIPS['Mudball']);
+            itemsBox.appendChild(div);
+            return;
+        }
         const div = document.createElement('div');
         div.className = 'inventory-item';
         div.textContent = item;
+        if (item === 'Void Gift') {
+            const scramble = () => {
+                let s = '';
+                for (let i = 0; i < 8; i++) s += VOID_CHARSET[Math.floor(Math.random() * VOID_CHARSET.length)];
+                div.textContent = s;
+            };
+            scramble();
+            _voidGiftAnimInterval = setInterval(scramble, 90);
+        }
         if (item === 'Weird Rock' || item === 'Weird Bone') {
             div.classList.add('inventory-item-usable');
             div.addEventListener('click', () => showStrengthBoostPrompt(item));
@@ -7804,6 +8531,7 @@ function updateInventory() {
             div.classList.add('inventory-item-usable');
             div.addEventListener('click', showEmptyGunPrompt);
         }
+        attachTooltip(div, ITEM_TOOLTIPS[item]);
         itemsBox.appendChild(div);
     });
     const attrsBox = document.getElementById('attributes-box');
@@ -7812,24 +8540,28 @@ function updateInventory() {
         const div = document.createElement('div');
         div.className = 'inventory-item';
         div.textContent = attr;
+        attachTooltip(div, ATTR_TOOLTIPS[attr]);
         attrsBox.appendChild(div);
     });
     if (G.player.stalked > 0) {
         const div = document.createElement('div');
         div.className = 'inventory-item';
         div.innerHTML = `<span class="stalked-label">Stalked</span> (${G.player.stalked})`;
+        attachTooltip(div, 'Something is following you. Increases danger in certain encounters.');
         attrsBox.appendChild(div);
     }
     if (G.thirdPartyInjured > 0) {
         const div = document.createElement('div');
         div.className = 'inventory-item';
         div.textContent = `It's Injured (${G.thirdPartyInjured})`;
+        attachTooltip(div, 'The Third Party creature is injured. May affect future encounters with it.');
         attrsBox.appendChild(div);
     }
     if (G.thirdPartyPlacated > 0) {
         const div = document.createElement('div');
         div.className = 'inventory-item';
         div.textContent = `It's Placated (${G.thirdPartyPlacated})`;
+        attachTooltip(div, 'The Third Party creature is placated. May affect future encounters with it.');
         attrsBox.appendChild(div);
     }
 }
@@ -8843,16 +9575,35 @@ function showSomnolenceWingsSubChoices() {
 // ============================================================
 function drawPowerCard() {
     if (G.powerCards.length >= 5) return; // hand size limit
-    const card = POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)];
-    G.powerCards.push({ ...card });
+    G.powerCards.push(filterDrawnCard({ ...POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)] }));
     if (G.player.attributes.includes('A New Face') && G.powerCards.length < 5) {
-        const bonus = POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)];
-        G.powerCards.push({ ...bonus });
+        G.powerCards.push(filterDrawnCard({ ...POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)] }));
     }
     renderPowerCards();
 }
 
+function filterDrawnCard(card) {
+    // Desecrator: 1 in 2 chance the card becomes Damnation
+    if (G.player.attributes.includes('Desecrator') && rollD10() <= 5) {
+        return { ...POWER_CARDS.find(c => c.id === 'damnation') };
+    }
+    // Ecocidal: reveal cards become a random remove card
+    if (G.player.attributes.includes('Ecocidal') &&
+        (card.type === 'hex_reveal_adjacent' || card.type === 'hex_reveal_any')) {
+        const removePool = POWER_CARDS.filter(c => c.type === 'hex_remove_random' || c.type === 'hex_remove_choice');
+        return { ...removePool[Math.floor(Math.random() * removePool.length)] };
+    }
+    return card;
+}
+
 function renderPowerCards() {
+    // Void Gift: always maintain a full hand of 5
+    if (G.player && G.player.items.includes('Void Gift')) {
+        while (G.powerCards.length < 5) {
+            G.powerCards.push({ ...POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)] });
+        }
+    }
+
     const countEl = document.getElementById('power-card-count');
     const grid    = document.getElementById('power-cards-grid');
     const empty   = document.getElementById('power-cards-empty');
