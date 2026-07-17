@@ -3458,13 +3458,11 @@ function placeLeafTokens() {
 function placeFaceOfStone() {
     const fos        = ENCOUNTERS[4].find(e => e.id === 'face_of_stone');
     const thirdParty = ENCOUNTERS[4].find(e => e.id === 'third_party');
-    const village    = ENCOUNTERS[4].find(e => e.id === 'village');
     const keys       = shuffle(Object.keys(G.board));
 
-    // 1 FOS, 18 third_party, 18 village
+    // 1 FOS, 36 third_party (village temporarily disabled)
     G.board[keys[0]].encounters[4] = fos;
-    for (let i = 1; i <= 18; i++)  G.board[keys[i]].encounters[4] = thirdParty;
-    for (let i = 19; i <= 36; i++) G.board[keys[i]].encounters[4] = village;
+    for (let i = 1; i <= 36; i++) G.board[keys[i]].encounters[4] = thirdParty;
 }
 
 function placeReplacementLeaf() {
