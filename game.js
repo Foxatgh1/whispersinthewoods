@@ -5165,7 +5165,27 @@ function fosGrantHomeEscape() {
 function showFosKnowledge(panel) {
     fosSwapToResponse(panel, 'I am sure you have many questions.', () => showFosKnowledgeCurrent(panel));
 }
-function showFosPower(panel)     { /* TBD */ }
+function showFosPower(panel) {
+    fosSwapToResponse(panel, 'Others have come for my power, but it killed them.', () => {
+        fosShowPanel(panel, 'Do you really want all of it?', [
+            { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'You will regret this.', () => playFosPowerChaoticDeath()) },
+            { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'I thought not, though I doubt you will be thrilled with even a fraction of my power either.', () => {
+                fosShowPanel(panel, 'Shall I give you a fraction then?', [
+                    { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'I will give you what you can handle.', () => showFosFractionScene(panel)) },
+                    { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Hmm, then I will impart you the minimum I can give.', () => {
+                        G.player.items.push('Void Gift');
+                        while (G.powerCards.length < 5) {
+                            G.powerCards.push({ ...POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)] });
+                        }
+                        renderPowerCards();
+                        updateStats();
+                        showFosCloseOverlay();
+                    }) },
+                ]);
+            }) },
+        ]);
+    });
+}
 
 function showFosPeace(panel) {
     fosSwapToResponse(panel, 'I think I know what that is. I will try to give it to you.', () => {
@@ -7270,25 +7290,7 @@ function showFosQ2(panel) {
         { label: 'I got lost.',     onClick: () => fosSwapToResponse(panel, 'Lost?', () => showFosQ3_goHome(panel)) },
         { label: "I don't know.",   onClick: () => fosSwapToResponse(panel, 'I do not know what brought you here either. I suppose it depends, then.', () => showFosQ_believe(panel)) },
         { label: 'Your knowledge.', onClick: () => fosSwapToResponse(panel, 'I am sure you have many questions.', () => showFosKnowledgeCurrent(panel)) },
-        { label: 'Your power.',     onClick: () => fosSwapToResponse(panel, 'Others have come for my power, but it killed them.', () => {
-            fosShowPanel(panel, 'Do you really want all of it?', [
-                { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'You will regret this.', () => playFosPowerChaoticDeath()) },
-                { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'I thought not, though I doubt you will be thrilled with even a fraction of my power either.', () => {
-                    fosShowPanel(panel, 'Shall I give you a fraction then?', [
-                        { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'I will give you what you can handle.', () => showFosFractionScene(panel)) },
-                        { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Hmm, then I will impart you the minimum I can give.', () => {
-                            G.player.items.push('Void Gift');
-                            while (G.powerCards.length < 5) {
-                                G.powerCards.push({ ...POWER_CARDS[Math.floor(Math.random() * POWER_CARDS.length)] });
-                            }
-                            renderPowerCards();
-                            updateStats();
-                            showFosCloseOverlay();
-                        }) },
-                    ]);
-                }) },
-            ]);
-        }) },
+        { label: 'Your power.',     onClick: () => showFosPower(panel) },
     ]);
 }
 
