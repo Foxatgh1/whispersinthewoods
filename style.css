@@ -493,6 +493,11 @@ body.level4-invert {
     background: var(--bg);
 }
 
+#board.village-mode {
+    max-width: none;
+    aspect-ratio: 640 / 750;
+}
+
 /* Hex styles */
 .hex-fill { transition: fill 0.12s; }
 .hex-fill.lvl-1 { fill: var(--hex-lvl1); }
@@ -545,11 +550,18 @@ body.level4-invert {
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
-/* Ominous level-4 label for non-FOS encounters */
+/* Ominous level-4 label — Third Party (aggressive) */
 .level-label.lvl-ominous {
     font-family: 'Cinzel Decorative', 'Palatino Linotype', serif;
     letter-spacing: 0.06em;
     fill: #c4a0a0;
+}
+
+/* Village level-4 label — Times New Roman, same color as FOS */
+.level-label.lvl-village {
+    font-family: 'Times New Roman', Times, serif;
+    fill: #cccccc;
+    font-size: 16px;
 }
 
 .player-token {

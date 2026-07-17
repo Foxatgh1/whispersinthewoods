@@ -37,6 +37,7 @@ const ITEM_TOOLTIPS = {
     'Mudball':                      '1 in 10 chance to succeed your next Speed check. One consumed on use.',
     'Void Gift':                    'Your hand is always refilled to 5 Power Cards.',
     '150 Pound Block of Rhodium':   'Extremely valuable. Extremely heavy.',
+    'Scrap of Metal':               'A jagged piece of scrap metal. Could be used as a tool. (+0.2 Strength, consumed on use)',
     'Gun':                          'Auto-succeeds your next Strength check. Consumed on use.',
     'Empty Gun':                    'The gun is empty. It can still be used as a blunt instrument.',
     'Wooden Beam':                  'Boosts Strength for your entire current encounter.',
@@ -62,7 +63,7 @@ const ATTR_TOOLTIPS = {
     'Covered in Mud':           '-0.1 Speed. Came with 10 Mudballs.',
     'Desecrator':               '1 in 2 chance any drawn Power Card becomes Damnation.',
     'Ecocidal':                 'Drawn reveal cards become remove cards instead.',
-    'Honest':                   'No effect.',
+    'Honest':                   'No effect, but at least you aren\'t lying to yourself.',
     'Longing':                  'No effect yet.',
     'Tainted by Carcinogens':   'No effect yet.',
     'Ascended':                 'No effect yet.',
@@ -2957,9 +2958,220 @@ const ENCOUNTERS = {
                     failure: null
                 }
             ]
+        },
+        {
+            id: 'village',
+            title: 'Village',
+            description: '',
+            choices: []
+        },
+        {
+            id: 'village_beset',
+            title: 'Through a Beset Village.',
+            description: 'You come upon a well-worn path leading up to a grouping of structures down the way. It\'s only a few hundred yards in the distance.',
+            choices: []
+        },
+        {
+            id: 'village_ruins',
+            title: 'Ruins of a Village.',
+            description: '',
+            choices: []
         }
     ]
 };
+
+// ============================================================
+// Village Beset — flat-top hex map for "Through a Beset Village."
+// Axial coords: q = col position in row, r = row_idx - floor(col/2)
+// Player starts at (5, 8) — bottommost stem hex.
+// ============================================================
+const VB_SIZE   = 36;
+const VB_SQRT3  = Math.sqrt(3);
+
+const VILLAGE_BESET_HEXES = [
+    // Row 0
+    { q:0,  r:0,  label:'!' }, { q:1,  r:0,  label:null }, { q:2,  r:-1, label:null },
+    { q:3,  r:-1, label:null }, { q:4,  r:-2, label:'S'  }, { q:5,  r:-2, label:null },
+    { q:6,  r:-3, label:'G'  }, { q:7,  r:-3, label:null }, { q:8,  r:-4, label:null },
+    { q:9,  r:-4, label:null }, { q:10, r:-5, label:'B'  },
+    // Row 1
+    { q:0,  r:1,  label:'B'  }, { q:1,  r:1,  label:null }, { q:2,  r:0,  label:null },
+    { q:3,  r:0,  label:null }, { q:4,  r:-1, label:'M'  }, { q:5,  r:-1, label:'M'  },
+    { q:6,  r:-2, label:'M'  }, { q:7,  r:-2, label:null }, { q:8,  r:-3, label:null },
+    { q:9,  r:-3, label:'A'  }, { q:10, r:-4, label:null },
+    // Row 2
+    { q:0,  r:2,  label:'D'  }, { q:1,  r:2,  label:null }, { q:2,  r:1,  label:null },
+    { q:3,  r:1,  label:null }, { q:4,  r:0,  label:'M'  }, { q:5,  r:0,  label:null },
+    { q:6,  r:-1, label:'M'  }, { q:7,  r:-1, label:null }, { q:8,  r:-2, label:null },
+    { q:9,  r:-2, label:null }, { q:10, r:-3, label:'D'  },
+    // Row 3
+    { q:0,  r:3,  label:null }, { q:1,  r:3,  label:null }, { q:2,  r:2,  label:null },
+    { q:3,  r:2,  label:'H'  }, { q:4,  r:1,  label:null }, { q:5,  r:1,  label:'C'  },
+    { q:6,  r:0,  label:null }, { q:7,  r:0,  label:'H'  }, { q:8,  r:-1, label:null },
+    { q:9,  r:-1, label:null }, { q:10, r:-2, label:null },
+    // Row 4
+    { q:0,  r:4,  label:'B'  }, { q:1,  r:4,  label:'B'  }, { q:2,  r:3,  label:null },
+    { q:3,  r:3,  label:null }, { q:4,  r:2,  label:null }, { q:5,  r:2,  label:null },
+    { q:6,  r:1,  label:null }, { q:7,  r:1,  label:null }, { q:8,  r:0,  label:null },
+    { q:9,  r:0,  label:null }, { q:10, r:-1, label:null },
+    // Row 5
+    { q:0,  r:5,  label:'D'  }, { q:1,  r:5,  label:'B'  }, { q:2,  r:4,  label:null },
+    { q:3,  r:4,  label:'H'  }, { q:4,  r:3,  label:null }, { q:5,  r:3,  label:null },
+    { q:6,  r:2,  label:'B'  }, { q:7,  r:2,  label:'H'  }, { q:8,  r:1,  label:null },
+    { q:9,  r:1,  label:null }, { q:10, r:0,  label:'D'  },
+    // Row 6
+    { q:0,  r:6,  label:'B'  }, { q:1,  r:6,  label:'B'  }, { q:2,  r:5,  label:null },
+    { q:3,  r:5,  label:null }, { q:4,  r:4,  label:null }, { q:5,  r:4,  label:null },
+    { q:6,  r:3,  label:null }, { q:7,  r:3,  label:null }, { q:8,  r:2,  label:null },
+    { q:9,  r:2,  label:'B'  }, { q:10, r:1,  label:null },
+    // Row 7 (partial — cols 1, 3, 7, 9 omitted)
+    { q:0,  r:7,  label:null }, { q:2,  r:6,  label:null }, { q:4,  r:5,  label:null },
+    { q:5,  r:5,  label:'E'  }, { q:6,  r:4,  label:null }, { q:8,  r:3,  label:null },
+    { q:10, r:2,  label:null },
+    // Stem (straight down from E)
+    { q:5,  r:6,  label:null },
+    { q:5,  r:7,  label:'P'  },
+    { q:5,  r:8,  label:null },  // player start
+];
+
+const VB_HEX_MAP = new Map(VILLAGE_BESET_HEXES.map(h => [`${h.q},${h.r}`, h]));
+
+const VILLAGE_HEX_ENCOUNTERS = {
+    'P': {
+        id: 'village_p',
+        title: 'The Straight and Narrow',
+        description: 'The path is more of a road and is well-defined. It has clearly been maintained by somebody in the recent past.',
+        choices: [
+            {
+                text: 'Forge ahead.',
+                success: { text: 'You plod on, determined to see what is at the end of the road.', effects: {} }
+            },
+            {
+                text: 'Look at the road around you.',
+                success: { text: 'You squint at the rocks lining the side of the road and realize that all of them are glowing faintly, as if coated in a special paint. A few have holes with something flickering in them. They make the road easier to follow.', effects: {} }
+            },
+            {
+                text: 'Stare at the trees.',
+                success: { text: 'You observe the soft rustling of the trees around the dirt road. Their movement is too organic for the current breeze. What animals are out there? You brush away the thought and keep moving.', effects: {} }
+            }
+        ]
+    },
+    'E': {
+        id: 'village_e',
+        title: 'Entrance to a Village',
+        description: 'The path ends at a pair of large, rusty, unhinged gates. They were probably once quite ornate, but have since been so greatly battered that they now hang ajar, each off one or two of their hinges. Beyond them are what appear to be small houses, though their walls look like a strange cobble of timber, stucco and vinyl. Many of their windows are irregular, situated at odd portions on the buildings.',
+        choices: [
+            {
+                text: 'Enter.',
+                success: { text: '', effects: {} }
+            }
+        ]
+    },
+    '1,5': {
+        id: 'village_atw',
+        title: 'A Way Through',
+        description: 'Bat-like corpses are piled up, forming high mounds that would be challenging to climb over. However, between the two mounds is a small hole one could try to fit through. You could even attempt to enter it if you wanted.',
+        choices: [],
+        customHandler: 'villageATW'
+    },
+    '5,1': {
+        id: 'village_roundabout',
+        title: 'Roundabout',
+        description: 'A large tree stands in the center of the village. It is not so much tall as it is wide and leaves have fallen from some of its branches. The odd combination of death and life on its branches makes it hard to wrap your mind around it.',
+        choices: [],
+        customHandler: 'villageRoundabout'
+    },
+    '3,4': {
+        id: 'village_shuttered_home',
+        title: 'Shuttered Home',
+        description: 'You walk right up to the house closest to the village\'s entrance. All of its windows are covered in thick wooden boards. You couldn\'t get in without considerable effort and a few hours to kill.',
+        choices: [],
+        customHandler: 'villageShutteredHome'
+    },
+    '0,4': {
+        id: 'village_b1_r5',
+        title: 'Torn and Broken',
+        description: 'A wall of black animals is piled up in front of you. No blood drips down through the grass beneath them, but the scent of chlorine pierces through the air, giving you a headache.',
+        choices: [
+            {
+                text: 'Continue.',
+                success: { text: '', effects: {} }
+            }
+        ]
+    },
+    'BH': {
+        id: 'village_burned_home',
+        title: 'Nothing But Embers',
+        description: 'You burned this house down. It\'s too dangerous to go near it.',
+        choices: [
+            { text: 'Continue.', success: { text: '', effects: {} } }
+        ]
+    },
+    // Coordinate-keyed encounters (checked before label fallback)
+    '0,6': {
+        id: 'village_b_r6c0',
+        title: 'Bent and Broken',
+        description: 'A large pile of the leathery black bodies is piled up against a stone fence. Various limbs, probosci, and dark protrusions stick out from among them. Some of the limbs are so long and crooked that it is a wonder they manage to stand up at all. It is like they defy gravity.',
+        choices: [
+            {
+                text: 'Continue.',
+                success: { text: '', effects: {} }
+            }
+        ]
+    },
+    '1,6': {
+        id: 'village_b_r6c1',
+        title: 'The Misshapen Black',
+        description: 'Scattered about you are the corpses of several great winged things. They all share black, leathery skin and a variety of limbs, though none look like arms or legs. A larger mound of bodies lies just a ways away.',
+        choices: [
+            {
+                text: 'Continue.',
+                success: { text: '', effects: {} }
+            }
+        ]
+    },
+    '6,2': {
+        id: 'village_azazel',
+        title: 'Azazel?',
+        description: 'There was once likely an annex attached to one of the bigger houses in the village, but a huge black creature has fallen upon its roof. It has shaken the door ajar.',
+        choices: [
+            {
+                text: 'Continue.',
+                success: { text: '', effects: {} }
+            }
+        ]
+    },
+    '7,2': {
+        id: 'village_barely_livable',
+        title: 'Barely Livable',
+        description: 'This is the most complete of the houses...or at least it once was. It looks like it has been built of cheap brick, but a separate annex seems to have been later attached. The annex\'s roof has completely caved in. A large winged bat thing appears to have fallen upon it. The destruction seems to have knocked the door ajar and it hangs loose.',
+        choices: [],
+        customHandler: 'villageBareLivable'
+    }
+};
+
+function vbHexToPixel(q, r) {
+    return {
+        x: VB_SIZE * 1.5 * q,
+        y: VB_SIZE * (VB_SQRT3 * 0.5 * q + VB_SQRT3 * r)
+    };
+}
+
+function vbHexCorners(cx, cy) {
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 3 * i;
+        pts.push(`${cx + VB_SIZE * Math.cos(angle)},${cy + VB_SIZE * Math.sin(angle)}`);
+    }
+    return pts.join(' ');
+}
+
+function vbNeighbors(q, r) {
+    return [
+        { q:q+1, r:r-1 }, { q:q+1, r:r   }, { q:q,   r:r+1 },
+        { q:q-1, r:r+1 }, { q:q-1, r:r   }, { q:q,   r:r-1 },
+    ].filter(n => VB_HEX_MAP.has(`${n.q},${n.r}`));
+}
 
 // Special encounter when a leaf token is found
 const LEAF_ENCOUNTER = {
@@ -3115,7 +3327,7 @@ function newGameState() {
             attributes:  [],
             leafTokens:  0,
             closeToPower: 0,
-            strengthOfACertainParty: 10
+            strengthOfACertainParty: 1
         },
         phase:            'move',   // 'move' | 'encounter' | 'gameover' | 'win'
         pendingEncounter: null,     // { encounter, hex }
@@ -3161,7 +3373,12 @@ function newGameState() {
         thirdPartyFedIt:     false, // Feed It can only be used once per encounter
         thirdPartyTriggered: false, // prevents stalked-path from firing more than once
         fosHelpedEscape:     false, // Face of Stone guided the player home
-        peacefulWoods:       false  // Face restored the forest; all hexes become peaceful
+        peacefulWoods:       false, // Face restored the forest; all hexes become peaceful
+        inVillageMap:        false, // player is navigating the village hex map
+        villagePlayerQ:      5,     // axial q of player in village map
+        villagePlayerR:      8,     // axial r of player in village map (start = bottommost hex)
+        villageBesetTunnelUsed: false, // player passed through B2 tunnel into D1
+        gettingLateSeen:        false  // its_getting_late only fires once per game
     };
 }
 
@@ -3169,6 +3386,9 @@ function newGameState() {
 // INITIALIZATION
 // ============================================================
 function initGame() {
+    document.querySelectorAll('img[src*="foreverplain"]').forEach(el => el.remove());
+    const endScreen = document.getElementById('end-screen');
+    if (endScreen) endScreen.style.zIndex = '';
     G = newGameState();
 
     // Build all hex positions for a radius-3 large hexagon
@@ -3236,20 +3456,15 @@ function placeLeafTokens() {
 }
 
 function placeFaceOfStone() {
-    const fos    = ENCOUNTERS[4].find(e => e.id === 'face_of_stone');
-    const nonFos = ENCOUNTERS[4].filter(e => e.id !== 'face_of_stone');
-    const keys   = Object.keys(G.board);
+    const fos        = ENCOUNTERS[4].find(e => e.id === 'face_of_stone');
+    const thirdParty = ENCOUNTERS[4].find(e => e.id === 'third_party');
+    const village    = ENCOUNTERS[4].find(e => e.id === 'village');
+    const keys       = shuffle(Object.keys(G.board));
 
-    // Strip any FOS encounters assigned during random init, replace with non-FOS
-    keys.forEach(k => {
-        if (G.board[k].encounters[4].id === 'face_of_stone') {
-            G.board[k].encounters[4] = nonFos[Math.floor(Math.random() * nonFos.length)];
-        }
-    });
-
-    // Place FOS on exactly one random hex
-    const pick = keys[Math.floor(Math.random() * keys.length)];
-    G.board[pick].encounters[4] = fos;
+    // 1 FOS, 18 third_party, 18 village
+    G.board[keys[0]].encounters[4] = fos;
+    for (let i = 1; i <= 18; i++)  G.board[keys[i]].encounters[4] = thirdParty;
+    for (let i = 19; i <= 36; i++) G.board[keys[i]].encounters[4] = village;
 }
 
 function placeReplacementLeaf() {
@@ -3323,6 +3538,7 @@ function isEdgeHex(q, r) {
 // RENDERING
 // ============================================================
 function renderBoard() {
+    if (G.inVillageMap) return;
     const hexLayer   = document.getElementById('hex-layer');
     const tokenLayer = document.getElementById('token-layer');
     hexLayer.innerHTML   = '';
@@ -3399,10 +3615,13 @@ function renderBoard() {
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', x);
         label.setAttribute('y', y);
-        const isOminous = lvl === 4 && hex.encounters[4].id !== 'face_of_stone';
-        label.setAttribute('class', 'level-label' + (isOminous ? ' lvl-ominous' : ''));
+        const l4id = lvl === 4 ? hex.encounters[4].id : null;
+        let labelClass = 'level-label';
+        if (l4id === 'third_party') labelClass += ' lvl-ominous';
+        if (l4id === 'village')     labelClass += ' lvl-village';
+        label.setAttribute('class', labelClass);
         label.setAttribute('fill', lvl >= 3 ? '#cccccc' : '#555555');
-        label.textContent = lvl;
+        label.textContent = l4id === 'village' ? '⌂' : lvl;
 
         g.appendChild(fill);
         g.appendChild(stroke);
@@ -3488,14 +3707,21 @@ function triggerEncounter(hex) {
         return;
     }
 
-    const encounter = G.pendingLeaf
+    let encounter = G.pendingLeaf
         ? (hex.currentLevel === 1 ? LEAF_ENCOUNTER : LEAF_ENCOUNTER_DEFAULT)
         : hex.encounters[hex.currentLevel];
 
     G.pendingEncounter = { encounter, hex };
 
-    if (hex.currentLevel === 4 && encounter.id !== 'face_of_stone') {
+    if (hex.currentLevel === 4 && encounter.id !== 'face_of_stone' && encounter.id !== 'village') {
         document.body.classList.add('level4-invert');
+    }
+
+    // Village hex: route to beset or ruins based on sotcp
+    if (encounter.id === 'village') {
+        const variant = G.player.strengthOfACertainParty >= 1 ? 'village_beset' : 'village_ruins';
+        G.pendingEncounter.encounter = ENCOUNTERS[4].find(e => e.id === variant);
+        encounter = G.pendingEncounter.encounter;
     }
 
     // No-item fallback: if the encounter requires an item the player lacks, show alternate description and auto-continue
@@ -3512,6 +3738,19 @@ function triggerEncounter(hex) {
         return;
     }
 
+    // One-time encounters
+    if (encounter.id === 'its_getting_late') {
+        if (G.gettingLateSeen) { continueAfterEncounter(); return; }
+        G.gettingLateSeen = true;
+        // Replace all remaining its_getting_late assignments with a random other L1 encounter
+        const otherL1 = ENCOUNTERS[1].filter(e => e.id !== 'its_getting_late');
+        Object.values(G.board).forEach(hex => {
+            if (hex.encounters[1] && hex.encounters[1].id === 'its_getting_late') {
+                hex.encounters[1] = otherL1[Math.floor(Math.random() * otherL1.length)];
+            }
+        });
+    }
+
     // Encounters with custom intros always bypass the normal flow
     if (encounter.id === 'third_party') {
         playThirdPartyIntro(encounter);
@@ -3519,6 +3758,10 @@ function triggerEncounter(hex) {
     }
     if (encounter.id === 'face_of_stone') {
         playFaceOfStoneIntro();
+        return;
+    }
+    if (encounter.id === 'village_beset') {
+        playVillageBesetIntro();
         return;
     }
 
@@ -3721,6 +3964,1063 @@ function playThirdPartyIntro(enc) {
 // ============================================================
 // FACE OF STONE ENCOUNTER
 // ============================================================
+
+// ============================================================
+// Village Beset functions
+// ============================================================
+
+function playVillageBesetIntro() {
+    const enc = ENCOUNTERS[4].find(e => e.id === 'village_beset');
+    showEncounterOverlay(enc);
+
+    const boardSvg    = document.getElementById('board');
+    const leafDisplay = document.getElementById('leaf-display');
+
+    // Fade out the board immediately using its existing CSS transition
+    boardSvg.style.opacity       = '0';
+    boardSvg.style.pointerEvents = 'none';
+    if (leafDisplay) leafDisplay.style.opacity = '0';
+
+    // Once faded out, swap content and fade back in
+    setTimeout(() => {
+        enterVillageBeset();
+        boardSvg.style.opacity       = '1';
+        boardSvg.style.pointerEvents = '';
+    }, 950);
+}
+
+function enterVillageBeset() {
+    G.inVillageMap   = true;
+    G.villagePlayerQ = 5;
+    G.villagePlayerR = 8;
+    G.phase          = 'move';
+
+    document.getElementById('hex-layer').setAttribute('display', 'none');
+    document.getElementById('token-layer').setAttribute('display', 'none');
+    // player-token-img stays visible — glasses are fixed at SVG center
+
+    renderVillageBoard();
+}
+
+function vbTokenOffset(q, r) {
+    const { x, y } = vbHexToPixel(q, r);
+    return {
+        x: x - (VB_SIZE * 7.5),
+        y: y - (VB_SIZE * VB_SQRT3 * 5.25)
+    };
+}
+
+function placeVillagePlayerToken(animate) {
+    const boardSvg = document.getElementById('board');
+    const tw = VB_SIZE * 1.8, th = VB_SIZE * 1.2;
+    let token = document.getElementById('village-player-token');
+    if (!token) {
+        token = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        token.setAttribute('id',            'village-player-token');
+        token.setAttribute('href',          'assets/accountantglasses.png');
+        token.setAttribute('x',            -tw / 2);
+        token.setAttribute('y',            -th / 2);
+        token.setAttribute('width',         tw);
+        token.setAttribute('height',        th);
+        token.setAttribute('pointer-events','none');
+        boardSvg.appendChild(token);
+    }
+    if (animate) {
+        token.style.transition = 'transform 0.35s ease';
+    } else {
+        token.style.transition = 'none';
+    }
+    const { x, y } = vbTokenOffset(G.villagePlayerQ, G.villagePlayerR);
+    token.setAttribute('transform', `translate(${x.toFixed(2)}, ${y.toFixed(2)})`);
+}
+
+let _vbPanRaf = null;
+
+function panVillageLayer(animate) {
+    const layer = document.getElementById('village-layer');
+    if (!layer) return;
+    const { x: tx, y: ty } = vbHexToPixel(G.villagePlayerQ, G.villagePlayerR);
+    const destX = -tx, destY = -ty;
+
+    if (!animate) {
+        if (_vbPanRaf) { cancelAnimationFrame(_vbPanRaf); _vbPanRaf = null; }
+        layer.setAttribute('transform', `translate(${destX.toFixed(2)},${destY.toFixed(2)})`);
+        return;
+    }
+
+    // Parse current SVG transform to get start position
+    const cur = layer.getAttribute('transform') || 'translate(0,0)';
+    const m   = cur.match(/translate\(\s*([^,]+),([^)]+)\)/);
+    const startX = m ? parseFloat(m[1]) : 0;
+    const startY = m ? parseFloat(m[2]) : 0;
+
+    const duration = 350;
+    const t0 = performance.now();
+
+    function step(now) {
+        const p    = Math.min((now - t0) / duration, 1);
+        const ease = p < 0.5 ? 2*p*p : -1 + (4 - 2*p)*p;
+        const x    = startX + (destX - startX) * ease;
+        const y    = startY + (destY - startY) * ease;
+        layer.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+        if (p < 1) _vbPanRaf = requestAnimationFrame(step);
+        else _vbPanRaf = null;
+    }
+    if (_vbPanRaf) cancelAnimationFrame(_vbPanRaf);
+    _vbPanRaf = requestAnimationFrame(step);
+}
+
+function renderVillageBoard() {
+    const boardSvg = document.getElementById('board');
+    const old = document.getElementById('village-layer');
+    if (old) old.remove();
+
+    const layer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    layer.setAttribute('id', 'village-layer');
+
+    // Pan so current player hex is at SVG origin (glasses fixed at center)
+    const { x: cx, y: cy } = vbHexToPixel(G.villagePlayerQ, G.villagePlayerR);
+    layer.setAttribute('transform', `translate(${(-cx).toFixed(2)},${(-cy).toFixed(2)})`);
+
+
+    const pq     = G.villagePlayerQ;
+    const pr     = G.villagePlayerR;
+    const adjSet = new Set(vbNeighbors(pq, pr).map(n => `${n.q},${n.r}`));
+
+    for (const hex of VILLAGE_BESET_HEXES) {
+        const { x, y } = vbHexToPixel(hex.q, hex.r);
+        const pts      = vbHexCorners(x, y);
+        const key      = `${hex.q},${hex.r}`;
+        const isAdj = adjSet.has(key);
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', pts);
+        poly.setAttribute('fill', '#ffffff');
+        poly.setAttribute('stroke', '#333');
+        poly.setAttribute('stroke-width', '1');
+
+        if (isAdj) {
+            poly.style.cursor = 'pointer';
+            poly.addEventListener('mouseenter', () => poly.setAttribute('fill', '#e0e0e0'));
+            poly.addEventListener('mouseleave', () => poly.setAttribute('fill', '#ffffff'));
+            const hq = hex.q, hr = hex.r;
+            poly.addEventListener('click', () => onVillageHexClick(hq, hr));
+        }
+
+        g.appendChild(poly);
+
+        if (hex.label) {
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x);
+            text.setAttribute('y', y);
+            text.setAttribute('text-anchor',       'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.setAttribute('font-size',         '18');
+            text.setAttribute('font-family',       'Times New Roman, serif');
+            text.setAttribute('fill',              '#222');
+            text.setAttribute('pointer-events',    'none');
+            text.textContent = hex.label;
+            g.appendChild(text);
+        }
+
+        layer.appendChild(g);
+    }
+
+    // Insert layer before player-token-img so glasses always render on top
+    const mainToken = document.getElementById('player-token-img');
+    if (mainToken) boardSvg.insertBefore(layer, mainToken);
+    else boardSvg.appendChild(layer);
+}
+
+function vbSlideAndReject(destQ, destR, message) {
+    // Animate the map 40% toward dest, then snap back, and show a blocking message
+    const layer = document.getElementById('village-layer');
+    if (!layer) return;
+
+    const { x: fromX, y: fromY } = vbHexToPixel(G.villagePlayerQ, G.villagePlayerR);
+    const { x: toX,   y: toY   } = vbHexToPixel(destQ, destR);
+
+    const startX = -fromX, startY = -fromY;
+    const midX   = -(fromX + (toX - fromX) * 0.4);
+    const midY   = -(fromY + (toY - fromY) * 0.4);
+
+    const duration = 180;
+    let t0 = performance.now();
+    let phase = 'out'; // 'out' then 'back'
+
+    function step(now) {
+        const p    = Math.min((now - t0) / duration, 1);
+        const ease = p < 0.5 ? 2*p*p : -1 + (4 - 2*p)*p;
+        if (phase === 'out') {
+            const x = startX + (midX - startX) * ease;
+            const y = startY + (midY - startY) * ease;
+            layer.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+            if (p < 1) { requestAnimationFrame(step); }
+            else { phase = 'back'; t0 = performance.now(); requestAnimationFrame(step); }
+        } else {
+            const x = midX + (startX - midX) * ease;
+            const y = midY + (startY - midY) * ease;
+            layer.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+            if (p < 1) requestAnimationFrame(step);
+        }
+    }
+    requestAnimationFrame(step);
+
+    // Show blocking message in encounter panel without locking phase
+    const titleEl = document.getElementById('ep-title');
+    const descEl  = document.getElementById('ep-description');
+    titleEl.className = ''; titleEl.style.opacity = '0'; titleEl.textContent = '';
+    descEl.className  = ''; descEl.style.opacity  = '0'; descEl.textContent  = message;
+    setTimeout(() => descEl.classList.add('fade-in'), 0);
+}
+
+function onVillageHexClick(q, r) {
+    if (G.phase !== 'move') return;
+
+    // D1 (q:0, r:5) can only be entered from B2 (q:1, r:5) via the tunnel
+    if (q === 0 && r === 5) {
+        const fromB2 = G.villagePlayerQ === 1 && G.villagePlayerR === 5;
+        if (!fromB2 || !G.villageBesetTunnelUsed) {
+            vbSlideAndReject(q, r, 'The heap of bodies is too great for you to pass here.');
+            return;
+        }
+    }
+
+    G.villagePlayerQ = q;
+    G.villagePlayerR = r;
+    panVillageLayer(true);
+    setTimeout(() => {
+        renderVillageBoard();
+        const hex = VB_HEX_MAP.get(`${q},${r}`);
+        const enc = hex && (VILLAGE_HEX_ENCOUNTERS[`${q},${r}`] ?? (hex.label && VILLAGE_HEX_ENCOUNTERS[hex.label]));
+        if (enc) {
+            G.phase = 'encounter';
+            G.pendingEncounter = { encounter: enc, hex: null };
+            if (enc.customHandler) window[enc.customHandler]();
+            else showEncounterOverlay(enc);
+        }
+    }, 350);
+}
+
+// ============================================================
+// A Way Through — village encounter at q:1, r:5
+// ============================================================
+
+function villageATW() {
+    const enc = VILLAGE_HEX_ENCOUNTERS['1,5'];
+    showEncounterOverlay(enc);
+    const choicesEl = document.getElementById('ep-choices');
+    function addBtn(label, handler, delay) {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.style.opacity = '0';
+        btn.appendChild(Object.assign(document.createElement('span'), { textContent: label }));
+        btn.addEventListener('click', handler);
+        choicesEl.appendChild(btn);
+        setTimeout(() => btn.classList.add('fade-in'), delay);
+    }
+    setTimeout(() => {
+        addBtn('Enter the hole.', villageATWEnter,    0);
+        addBtn('Walk away.',      villageATWWalkAway, 120);
+    }, 260);
+}
+
+function villageATWEnter() {
+    document.getElementById('ep-choices').innerHTML = '';
+    const effectLines = applyEffects({ health: -1 });
+    updateStats();
+    document.getElementById('ep-roll').textContent = '';
+    showResultText('You jam yourself into the tight gap, clothes and skin raking against the jagged bodies and split bones. Your eyes water from the smell of chlorine and you feel as though your lungs might give out.', effectLines);
+    document.getElementById('ep-result').classList.remove('hidden');
+    document.getElementById('ep-continue').style.display = 'none';
+    clearSubChoiceButtons();
+    setTimeout(() => {
+        addSubChoiceButton('Move further in.',   villageATWMoveIn);
+        addSubChoiceButton('Get out of there.', villageATWGetOut);
+    }, 120);
+}
+
+function villageATWMoveIn() {
+    clearSubChoiceButtons();
+    const effectLines = applyEffects({ peaceOfMind: -1 });
+    updateStats();
+    showResultText('You ignore the smell as best you can and keep pulling your body through the thin gap. Occasionally, what could have been a monstrous head had they not been so irregular hang down at you. Each one sends a shudder through you. Are you sure you want to keep going?', effectLines);
+    document.getElementById('ep-continue').style.display = 'none';
+    setTimeout(() => {
+        addSubChoiceButton('Push through.',    villageATWPushThrough);
+        addSubChoiceButton("I can't do this.", villageATWTurnBack);
+    }, 120);
+}
+
+function villageATWPushThrough() {
+    clearSubChoiceButtons();
+    G.villageBesetTunnelUsed = true;
+    showResultText('The gap thins and the press of bodies grows to be nearly too much for your ribcage before...you stumble out into the other side of the mound. You are free...', []);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageATWTurnBack() {
+    clearSubChoiceButtons();
+    const effectLines = applyEffects({ peaceOfMind: -1 });
+    updateStats();
+    showResultText("The mound thins and you gasp for air. This is too much. There could be people elsewhere in town. It's no use trying to go further. Why would you attempt this in the first place? You squeeze your way out of the mound and fall to the earth back where you started.", effectLines);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageATWGetOut() {
+    clearSubChoiceButtons();
+    resolveChoice({
+        text: 'Get out of there.',
+        check: { stat: 'strength', target: 1.6 },
+        success: {
+            text: "You haven't gone too far in, but the pressure of not being able to see the far side of the mound of carcasses is simply too much. You tear your clothes on the way out, but you aren't harmed any more than you were.",
+            effects: {}
+        },
+        failure: {
+            text: "You haven't gone too far in, but you start to feel claustrophobic and cramped. The press of bodies is menacing and you wonder if, though monsters, they suffered as they died. You begin to panic and frantically push your way outside. You come out unharmed, but the experience leaves you unsettled.",
+            effects: { peaceOfMind: -1 }
+        }
+    });
+}
+
+function villageATWWalkAway() {
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-roll').textContent = '';
+    showResultText('You do not want to see what is in there.', []);
+    document.getElementById('ep-result').classList.remove('hidden');
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+// ============================================================
+// Roundabout — village encounter at q:5, r:1
+// ============================================================
+
+let _roundaboutUsed = new Set();
+
+function villageRoundabout() {
+    _roundaboutUsed = new Set();
+    const enc = VILLAGE_HEX_ENCOUNTERS['5,1'];
+    showEncounterOverlay(enc);
+    const choicesEl = document.getElementById('ep-choices');
+    function addBtn(label, handler, delay) {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.style.opacity = '0';
+        btn.appendChild(Object.assign(document.createElement('span'), { textContent: label }));
+        btn.addEventListener('click', handler);
+        choicesEl.appendChild(btn);
+        setTimeout(() => btn.classList.add('fade-in'), delay);
+    }
+    setTimeout(() => {
+        addBtn('Approach the tree.', villageRoundaboutApproach, 0);
+        addBtn('Avoid the tree.',    villageRoundaboutAvoid,    120);
+    }, 260);
+}
+
+function showRoundaboutSubChoices() {
+    clearSubChoiceButtons();
+    document.getElementById('ep-continue').style.display = 'none';
+    setTimeout(() => {
+        if (!_roundaboutUsed.has('touch')) {
+            addSubChoiceButton('Touch it.', villageRoundaboutTouch);
+        }
+        if (!_roundaboutUsed.has('smell')) {
+            addSubChoiceButton('Smell it.', villageRoundaboutSmell);
+        }
+        if (!_roundaboutUsed.has('listen')) {
+            addSubChoiceButton('Listen to the wind in the branches.', villageRoundaboutListen);
+        }
+        const burnItem = ['Firestarter', 'Flamethrower'].find(i => G.player.items.includes(i));
+        if (burnItem) {
+            addSubChoiceButton('Burn the tree.', () => villageRoundaboutBurn(burnItem));
+        }
+        addSubChoiceButton('Walk away.', villageRoundaboutLeave);
+    }, 120);
+}
+
+function villageRoundaboutApproach() {
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-roll').textContent = '';
+    showResultText('You sidle up next to the tree to get a closer look at it.', []);
+    document.getElementById('ep-result').classList.remove('hidden');
+    showRoundaboutSubChoices();
+}
+
+function villageRoundaboutTouch() {
+    _roundaboutUsed.add('touch');
+    showResultText('You hold your hand up to the trunk and press it against the bark. It\'s...warm? As if the sun had been shining on it during the daytime.', []);
+    showRoundaboutSubChoices();
+}
+
+function villageRoundaboutSmell() {
+    _roundaboutUsed.add('smell');
+    showResultText('You pull your face close to the bark and sniff. It\'s an odd mix of dirt, wood, and copper.', []);
+    showRoundaboutSubChoices();
+}
+
+function villageRoundaboutListen() {
+    _roundaboutUsed.add('listen');
+    const effectLines = applyEffects({ peaceOfMind: 1 });
+    updateStats();
+    showResultText('You stand back to listen to the soft blowing of the boughs. Somewhere distant, a strange thrumming can be faintly heard, but, overall, the feeling is peaceful.', effectLines);
+    showRoundaboutSubChoices();
+}
+
+function villageRoundaboutBurn(item) {
+    const i = G.player.items.indexOf(item);
+    if (i !== -1) G.player.items.splice(i, 1);
+    updateInventory();
+    showResultText('You do all you can to light the tree ablaze, but your efforts are fruitless. It doesn\'t burn.', []);
+    showRoundaboutSubChoices();
+}
+
+function villageRoundaboutAvoid() {
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-roll').textContent = '';
+    showResultText('You have better things to do.', []);
+    document.getElementById('ep-result').classList.remove('hidden');
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageRoundaboutLeave() {
+    clearSubChoiceButtons();
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+// ============================================================
+// Shuttered Home — village encounter at q:3, r:4
+// ============================================================
+
+function villageShutteredHome() {
+    const enc = VILLAGE_HEX_ENCOUNTERS['3,4'];
+    showEncounterOverlay(enc);
+    const choicesEl = document.getElementById('ep-choices');
+    function addBtn(label, handler, delay) {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.style.opacity = '0';
+        btn.appendChild(Object.assign(document.createElement('span'), { textContent: label }));
+        btn.addEventListener('click', handler);
+        choicesEl.appendChild(btn);
+        setTimeout(() => btn.classList.add('fade-in'), delay);
+    }
+    setTimeout(() => {
+        addBtn('Scour the outside.', villageShutteredHomeScour, 0);
+        addBtn('Knock on the front door.', villageShutteredHomeKnock, 120);
+    }, 260);
+}
+
+function villageShutteredHomeScour() {
+    resolveChoice({
+        text: 'Scour the outside.',
+        check: { stat: 'visibility', target: 1.4 },
+        success: {
+            text: 'You circle the perimeter of the house and find its walls to be equally as unfriendly as the rest of the shack. You nearly stub your toe on a strange looking rock, though.',
+            effects: { grantItem: 'Weird Rock' }
+        },
+        failure: {
+            text: 'You circle the perimeter of the house and find its walls to be equally as hostile as the rest of the house. It\'s best not to snoop anymore here.',
+            effects: {}
+        }
+    });
+}
+
+function villageShutteredHomeKnock() {
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-roll').textContent = '';
+    showResultText('It looks like there is only one way in. You approach the wooden door facing the other houses. It\'s an ugly brown and constructed of a cull lumber that would not be suitable for modern buildings. You rap your hand against it and find it to be surprisingly sound. No one answers.', []);
+    document.getElementById('ep-result').classList.remove('hidden');
+    document.getElementById('ep-continue').style.display = 'none';
+    clearSubChoiceButtons();
+    setTimeout(() => {
+        addSubChoiceButton('Knock again.', villageShutteredHomeKnockAgain);
+        addSubChoiceButton('Leave.', villageShutteredHomeLeave);
+    }, 120);
+}
+
+function showShutteredHomeSubSubChoices() {
+    document.getElementById('ep-continue').style.display = 'none';
+    clearSubChoiceButtons();
+    setTimeout(() => {
+        addSubChoiceButton('Knock another time.', villageShutteredHomeKnockLoop);
+
+        const pryItem = ['Wooden Beam', 'Weird Bone', 'Walking Stick'].find(i => G.player.items.includes(i));
+        if (pryItem) {
+            addSubChoiceButton('Pry the door open.', () => villageShutteredHomePry(pryItem));
+        }
+
+        if (G.player.items.includes('Weird Rock')) {
+            addSubChoiceButton('Throw something at the door.', villageShutteredHomeThrow);
+        }
+
+        const burnItem = ['Firestarter', 'Flamethrower'].find(i => G.player.items.includes(i));
+        if (burnItem) {
+            addSubChoiceButton('Burn the house down.', () => villageShutteredHomeBurn(burnItem));
+        }
+
+        if (G.player.items.includes('Incongruous Staff')) {
+            addSubChoiceButton('Bash the door down.', villageShutteredHomeBash);
+        }
+
+        addSubChoiceButton('Leave.', villageShutteredHomeLeave);
+    }, 120);
+}
+
+function villageShutteredHomeKnockAgain() {
+    clearSubChoiceButtons();
+    showResultText('You wait a few seconds before knocking again on the door, harder this time. No response.', []);
+    showShutteredHomeSubSubChoices();
+}
+
+function villageShutteredHomeKnockLoop() {
+    clearSubChoiceButtons();
+    showResultText('You beat on the door a few times. There is clearly nobody who wants to see you.', []);
+    showShutteredHomeSubSubChoices();
+}
+
+function villageShutteredHomePry(item) {
+    clearSubChoiceButtons();
+    const i = G.player.items.indexOf(item);
+    if (i !== -1) G.player.items.splice(i, 1);
+    updateInventory();
+    showResultText(`You jam your ${item} into the small crack between the door and the frame and push. The ${item} breaks in half.`, []);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageShutteredHomeThrow() {
+    clearSubChoiceButtons();
+    const i = G.player.items.indexOf('Weird Rock');
+    if (i !== -1) G.player.items.splice(i, 1);
+    updateInventory();
+    showResultText('You throw a rock at the door, to little effect.', []);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageShutteredHomeBurn(item) {
+    clearSubChoiceButtons();
+    const i = G.player.items.indexOf(item);
+    if (i !== -1) G.player.items.splice(i, 1);
+    updateInventory();
+    const effectLines = applyEffects({ insanity: 1, sotcp: -1 });
+    updateStats();
+    showResultText('You start a blaze and let the flames lick at the dry wood of the house. The fire doesn\'t spread, but it consumes the house in minutes. A part of you expected to hear screams or yelps from inside, but nothing save the cold crackling of the bonfire can be heard in the night. Maybe there wasn\'t anybody in there...', effectLines);
+    // Convert hex to burned state
+    const hex = VB_HEX_MAP.get('3,4');
+    if (hex) hex.label = 'BH';
+    VILLAGE_HEX_ENCOUNTERS['3,4'] = VILLAGE_HEX_ENCOUNTERS['BH'];
+    renderVillageBoard();
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageShutteredHomeBash() {
+    clearSubChoiceButtons();
+    let base = G.player.strength;
+    const { base: debuffedBase, note: debuffNote } = applyDebuff('strength', base);
+    base = debuffedBase;
+    const roll    = rollD10();
+    const result  = parseFloat((base + roll * 0.1).toFixed(2));
+    const success = result >= 1.6;
+    document.getElementById('ep-roll').textContent =
+        `Roll: ${roll}  |  Strength ${base.toFixed(1)} + ${(roll * 0.1).toFixed(1)} = ${result.toFixed(2)} vs 1.6 — ${success ? 'SUCCESS' : 'FAILURE'}${debuffNote}`;
+
+    if (success) {
+        showResultText('The staff you have been carrying around is sturdy enough to withstand a few blows to the door. You use your weight and the staff to slam into the area around the doorknob. The door gives away surprisingly easily. The interior of the house is dark, lit only by a fading lantern hanging down from the ceiling. The whole floorplan is nothing but a single room and an earthen floor. In the center is a table with a few scraps of paper and...one chair cast into darkness in such a way that you can\'t tell if something is sitting on it.', []);
+        document.getElementById('ep-continue').style.display = 'none';
+        setTimeout(() => {
+            addSubChoiceButton('Approach the table.', villageShutteredHomeApproach);
+            addSubChoiceButton('On second thought...', villageShutteredHomeSecondThought);
+        }, 120);
+    } else {
+        showResultText('You throw your weight against the door with the staff, but can\'t generate enough force. The door holds firm.', []);
+        const continueBtn = document.getElementById('ep-continue');
+        continueBtn.style.display = '';
+        continueBtn.textContent  = 'Continue';
+        continueBtn.onclick = continueAfterEncounter;
+    }
+}
+
+function villageShutteredHomeApproach() {
+    clearSubChoiceButtons();
+    showResultText('You take a few steps into the house, coming right up to the table on the opposite side of the chair. It is clear that something occupies the chair, but their lack of reaction gives you the distinct feeling that they may not be alive.', []);
+    document.getElementById('ep-continue').style.display = 'none';
+    setTimeout(() => {
+        addSubChoiceButton('Read the papers on the table.', villageShutteredHomeReadPapers);
+        addSubChoiceButton('Walk around the table to the chair.', villageShutteredHomeWalkToChair);
+        addSubChoiceButton('Survey the walls of the hut.', villageShutteredHomeSurveyWalls);
+    }, 120);
+}
+
+function villageShutteredHomeReadPapers() {
+    clearSubChoiceButtons();
+    const { base, note } = applyDebuff('visibility', G.player.visibility);
+    const roll    = rollD10();
+    const result  = parseFloat((base + roll * 0.1).toFixed(2));
+    const success = result >= 1.3;
+    document.getElementById('ep-roll').textContent =
+        `Roll: ${roll}  |  Visibility ${base.toFixed(1)} + ${(roll * 0.1).toFixed(1)} = ${result.toFixed(2)} vs 1.3 — ${success ? 'SUCCESS' : 'FAILURE'}${note}`;
+    const effectLines = success ? [] : applyEffects({ peaceOfMind: -1, closeToPower: 1 });
+    updateStats();
+    showResultText(success
+        ? 'You gently pick up a few of the notes and rustle through them. The words are hard to read and the spelling is inconsistent, as if created by a child, but you manage to read the phrase, "Tuh fokiss ihs stell heer. We ahr nawt lawhst. Ehnd tiss." How strange.'
+        : 'You reach for the papers and rifle through them, but it\'s too dim for you to see anythi...there\'s a movement in your peripheral from the chair. Without hesitation, you rush out of the house, slamming the door behind you.',
+        effectLines);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageShutteredHomeWalkToChair() {
+    clearSubChoiceButtons();
+    const { base, note } = applyDebuff('visibility', G.player.visibility);
+    const roll    = rollD10();
+    const result  = parseFloat((base + roll * 0.1).toFixed(2));
+    const success = result >= 1.7;
+    document.getElementById('ep-roll').textContent =
+        `Roll: ${roll}  |  Visibility ${base.toFixed(1)} + ${(roll * 0.1).toFixed(1)} = ${result.toFixed(2)} vs 1.7 — ${success ? 'SUCCESS' : 'FAILURE'}${note}`;
+    const effectLines = success ? applyEffects({ peaceOfMind: -1, closeToPower: 1 }) : [];
+    updateStats();
+    showResultText(success
+        ? 'Ignoring the papers, you elect to check to see if the person at the table is okay. You step up to the unknown thing and start to make out the features of the head, the likes of which is strangely oblong. Your gaze traces downward toward its eyes and...oh no, it\'s looking at you! It isn\'t dead! It sees you! You run out of the house and the door slams shut behind you.'
+        : 'You step up to the chair and the figure, but can\'t make out its features in the dim light. Common sense stops you from actually touching it. A small movement from outside alerts you and you leave through the doorway, peering to see if there is anything outside.',
+        effectLines);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageShutteredHomeSurveyWalls() {
+    clearSubChoiceButtons();
+    const { base, note } = applyDebuff('visibility', G.player.visibility);
+    const roll    = rollD10();
+    const result  = parseFloat((base + roll * 0.1).toFixed(2));
+    const success = result >= 2.1;
+    document.getElementById('ep-roll').textContent =
+        `Roll: ${roll}  |  Visibility ${base.toFixed(1)} + ${(roll * 0.1).toFixed(1)} = ${result.toFixed(2)} vs 2.1 — ${success ? 'SUCCESS' : 'FAILURE'}${note}`;
+    const effectLines = applyEffects(success ? { peaceOfMind: -3 } : { peaceOfMind: -1 });
+    updateStats();
+    showResultText(success
+        ? 'You close your eyes for a minute to let them adjust to the dark and turn yourself away from the table. The walls are barely visible, but it seems like they are made of unpainted wood. You trace your fingers along the wall, taking care to avoid splinters. A sharp noise suddenly hits your ears, "Leave!" something hisses. The sound is not deafening, but it terrifies you. You whirl around and see that the figure\'s head has turned in your direction. You leap toward the door and fly out into the night.'
+        : 'You attempt to survey the walls for a doorway to another room or adornments, but can\'t make anything out. A small noise from the table frightens you and you flee outward into the night.',
+        effectLines);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageShutteredHomeSecondThought() {
+    clearSubChoiceButtons();
+    showResultText('You would rather not see what is in the house. You close the door as best you can and leave to explore elsewhere.', []);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent  = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageShutteredHomeLeave() {
+    clearSubChoiceButtons();
+    showResultText('You could try a few of the other houses.', []);
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+// ============================================================
+// Barely Livable — village encounter at q:7, r:3
+// ============================================================
+
+function villageBareLivable() {
+    const enc = VILLAGE_HEX_ENCOUNTERS['7,2'];
+    showEncounterOverlay(enc);
+    const choicesEl = document.getElementById('ep-choices');
+    document.getElementById('ep-continue').style.display = 'none';
+
+    function addBtn(label, handler, delay) {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = label;
+        btn.style.opacity = '0';
+        btn.style.transition = 'opacity 0.4s';
+        btn.addEventListener('click', handler);
+        choicesEl.appendChild(btn);
+        setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => { btn.style.opacity = '1'; })), delay);
+    }
+
+    setTimeout(() => {
+        addBtn('Knock on the door.', villageBareLivableKnock, 0);
+        addBtn('Walk into the house.', villageBareLivableEnter, 100);
+        addBtn('Leave.', villageBareLivableLeave, 200);
+    }, 260);
+}
+
+function villageBareLivableKnock() {
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-roll').textContent = '';
+    showResultText("You decide it would be best to see if someone is home before entering their house. You give a few taps on the door and wait a moment. After a few moments, you raise your hand again, but the door slams shut, nearly knocking you back. On further testing, the door doesn't budge.", []);
+    document.getElementById('ep-result').classList.remove('hidden');
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageBareLivableLeave() {
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-roll').textContent = '';
+    showResultText('There is no reason to try to enter the house.', []);
+    document.getElementById('ep-result').classList.remove('hidden');
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent = 'Continue';
+    continueBtn.onclick = continueAfterEncounter;
+}
+
+function villageBareLivableEnter() {
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-roll').textContent = '';
+    showResultText('Given the circumstances, you think it best to do away with pleasantries. You push open the door into a black room and immediately hear animal-like scrambling to your left.', []);
+    document.getElementById('ep-result').classList.remove('hidden');
+    document.getElementById('ep-continue').style.display = 'none';
+    setTimeout(() => {
+        addSubChoiceButton('Venture left.', villageBareLivableVentureLeft);
+        addSubChoiceButton('Continue straight.', villageBareLivableStraight);
+        addSubChoiceButton('Walk to the right.', villageBareLivableRight);
+    }, 120);
+}
+
+function villageBareLivableVentureLeft() {
+    clearSubChoiceButtons();
+    resolveChoice({
+        text: 'Venture left.',
+        check: { stat: 'visibility', target: 1.6 },
+        success: {
+            text: "Whatever is there, it's likely best for you to approach the menace head-on. You walk off to the side, holding your hands in front of you. Slowly but surely, you reach the far wall and encounter nothing but the menacing blackness. It also seems like there isn't any furniture in this room. What a waste of time this was.",
+            effects: {}
+        },
+        failure: {
+            text: "You choose to brave the darkness in the direction of the noise and begin to fumble around in an effort to reach the other side of the house. Three steps in, your foot catches on an unseen rut in the floor and you stumble forward, cursing under your breath. You don't fall, but, frustrated, you traipse out of the house.",
+            effects: {}
+        }
+    });
+}
+
+function villageBareLivableStraight() {
+    clearSubChoiceButtons();
+    let base = G.player.visibility;
+    if (G.flashlightActive)   base = parseFloat((base + 0.1).toFixed(1));
+    if (G.flamethrowerActive) base = parseFloat((base + 0.3).toFixed(1));
+    const { base: debuffedBase, note: debuffNote } = applyDebuff('visibility', base);
+    base = debuffedBase;
+    const roll   = rollD10();
+    const result = parseFloat((base + roll * 0.1).toFixed(1));
+    const passed = result >= 1.6;
+    document.getElementById('ep-roll').textContent =
+        `Roll: ${roll}  |  Visibility ${base.toFixed(1)} + ${(roll * 0.1).toFixed(1)} = ${result.toFixed(1)} vs 1.6 — ${passed ? 'SUCCESS' : 'FAILURE'}${debuffNote}`;
+    document.getElementById('ep-result').classList.remove('hidden');
+    const continueBtn = document.getElementById('ep-continue');
+    continueBtn.style.display = '';
+    continueBtn.textContent = 'Continue';
+
+    if (passed) {
+        showResultText("You ignore what happened to the left and walk as far as the light stretches from the doorway. There is something cozy about the home and you realize that the temperature in the house is perfect. You try to adjust your eyes to the light, to gaze more at the interior of the home, but can't see anything...and it looks like there isn't much to look at anyways.", []);
+        continueBtn.onclick = continueAfterEncounter;
+    } else {
+        showResultText("You walk as far into the back of the room as possible, beyond the light of the door until you are standing in complete darkness. Suddenly, the door swings shut behind you.", []);
+        continueBtn.onclick = startDarknessPuzzle;
+    }
+}
+
+function villageBareLivableRight() {
+    clearSubChoiceButtons();
+    resolveChoice({
+        text: 'Walk to the right.',
+        check: { stat: 'visibility', target: 1.6 },
+        success: {
+            text: "You want to see what's in the house, but you don't want to go near the wild animal. There must be a door to the annex to the right, anyways. Maybe you can find it. You hold your hands out in front of you and stumble along to the right. Eventually, your hands reach and touch a soft, squishy fabric. What could that...it moves ever so slightly and you leap back, hand over your mouth. You rush outside, the door swinging closed behind you.",
+            effects: { peaceOfMind: -2 }
+        },
+        failure: {
+            text: "You want to see what's in the house, but you don't want to go near the wild animal. You fumble around in the dark to the right and trip, falling against a wall. For a split second, you think you catch a word from something in front of you '\u2026interference\u2026', causing you to leap back. Someone is between you and the edge of the house. You back away out of the door and shut it behind you.",
+            effects: { peaceOfMind: -1 }
+        }
+    });
+}
+
+// ============================================================
+// Darkness Puzzle (Barely Livable — sub-choice 2 failure)
+// ============================================================
+
+let _darknessConsecFwd  = 0;
+let _darknessTotalPress = 0;
+
+function startDarknessPuzzle() {
+    _darknessConsecFwd  = 0;
+    _darknessTotalPress = 0;
+
+    document.getElementById('ep-continue').style.display = 'none';
+
+    // SNAP to black — no transition
+    const overlay = document.createElement('div');
+    overlay.id = 'darkness-puzzle-overlay';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; background: #000; z-index: 500;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        overflow: hidden;
+    `;
+    document.body.appendChild(overlay);
+
+    // Orientation text
+    const instrEl = document.createElement('p');
+    instrEl.id = 'darkness-instr';
+    instrEl.textContent = 'You are disoriented by the sudden and complete loss of light, all you can do is go left, right or forward.';
+    instrEl.style.cssText = `
+        color: #fff; text-align: center; max-width: 520px; padding: 0 24px;
+        font-family: var(--font); font-size: 1rem;
+        opacity: 0; transition: opacity 1s; margin: 0 0 16px;
+    `;
+    overlay.appendChild(instrEl);
+
+    // Step feedback text
+    const stepEl = document.createElement('p');
+    stepEl.id = 'darkness-step';
+    stepEl.style.cssText = `
+        color: #fff; text-align: center; max-width: 520px; padding: 0 24px;
+        font-family: var(--font); font-size: 1rem;
+        opacity: 0; transition: opacity 0.7s; margin: 0 0 32px; min-height: 1.4em;
+    `;
+    overlay.appendChild(stepEl);
+
+    // Direction buttons
+    const btnRow = document.createElement('div');
+    btnRow.id = 'darkness-btns';
+    btnRow.style.cssText = 'display: flex; gap: 16px; opacity: 0; transition: opacity 0.8s;';
+    ['Left.', 'Forward.', 'Right.'].forEach((label, i) => {
+        const dir = ['left', 'forward', 'right'][i];
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = label;
+        btn.style.minWidth = '100px';
+        btn.addEventListener('click', () => darknessPress(dir));
+        btnRow.appendChild(btn);
+    });
+    overlay.appendChild(btnRow);
+
+    // Fade in instruction, then buttons
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        instrEl.style.opacity = '1';
+        setTimeout(() => { btnRow.style.opacity = '1'; }, 1300);
+    }));
+}
+
+function darknessPress(dir) {
+    _darknessTotalPress++;
+    if (dir === 'forward') {
+        _darknessConsecFwd++;
+    } else {
+        _darknessConsecFwd = 0;
+    }
+
+    // Escape: 3 consecutive forwards
+    if (_darknessConsecFwd >= 3) {
+        darknessEscape();
+        return;
+    }
+
+    // Horror escalation
+    darknessHorror(_darknessTotalPress);
+    if (_darknessTotalPress >= 16) return; // game over triggered
+
+    const stepText = dir === 'left'    ? 'You move a little to the left.'
+                   : dir === 'forward' ? 'You take an uneasy step forward.'
+                   :                     'You move a little to the right.';
+    darknessShowStep(stepText);
+}
+
+function darknessShowStep(text) {
+    const btnRow = document.getElementById('darkness-btns');
+    const instrEl = document.getElementById('darkness-instr');
+    const stepEl  = document.getElementById('darkness-step');
+
+    btnRow.style.opacity = '0';
+    btnRow.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    instrEl.style.opacity = '0';
+
+    stepEl.textContent = text;
+    setTimeout(() => {
+        stepEl.style.opacity = '1';
+        setTimeout(() => {
+            stepEl.style.opacity = '0';
+            setTimeout(() => {
+                btnRow.querySelectorAll('button').forEach(b => { b.disabled = false; });
+                btnRow.style.opacity = '1';
+            }, 700);
+        }, 1600);
+    }, 100);
+}
+
+function darknessHorror(n) {
+    if (n === 4) {
+        darknessSpawnText('Who are you?', { top: '12px', left: '12px', size: '0.85rem', dur: 2200 });
+    } else if (n === 6) {
+        darknessSpawnText('\u2026intruder\u2026', { top: '12px', left: '12px', size: '0.85rem', dur: 2200 });
+    } else if (n === 8) {
+        for (let i = 0; i < 4; i++) {
+            setTimeout(() => darknessSpawnText('Get out.', {
+                top:  (10 + Math.random() * 78) + '%',
+                left: (5  + Math.random() * 80) + '%',
+                size: '1rem', dur: 1800
+            }), i * 300);
+        }
+    } else if (n === 10) {
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => darknessSpawnText('Get out.', {
+                top:  (5 + Math.random() * 85) + '%',
+                left: (5 + Math.random() * 85) + '%',
+                size: '1.6rem', bold: true, dur: 1200
+            }), i * 160);
+        }
+    } else if (n === 14) {
+        for (let i = 0; i < 7; i++) {
+            setTimeout(() => darknessSpawnText('Get out.', {
+                top:  (5 + Math.random() * 85) + '%',
+                left: (5 + Math.random() * 85) + '%',
+                size: '2.4rem', bold: true, color: '#ff2222', dur: 1000
+            }), i * 110);
+        }
+    } else if (n === 16) {
+        darknessGameOver();
+    }
+}
+
+function darknessSpawnText(text, opts = {}) {
+    const overlay = document.getElementById('darkness-puzzle-overlay');
+    if (!overlay) return;
+    const el = document.createElement('div');
+    el.style.cssText = `
+        position: absolute;
+        top: ${opts.top || '10px'};
+        left: ${opts.left || '10px'};
+        color: ${opts.color || '#fff'};
+        font-family: var(--font);
+        font-size: ${opts.size || '0.9rem'};
+        font-weight: ${opts.bold ? 'bold' : 'normal'};
+        opacity: 0; transition: opacity 0.5s;
+        pointer-events: none; white-space: nowrap;
+    `;
+    el.textContent = text;
+    overlay.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.opacity = '1';
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 600);
+        }, opts.dur || 1800);
+    }));
+}
+
+function darknessEscape() {
+    const overlay = document.getElementById('darkness-puzzle-overlay');
+    const btnRow  = document.getElementById('darkness-btns');
+    const instrEl = document.getElementById('darkness-instr');
+    const stepEl  = document.getElementById('darkness-step');
+
+    btnRow.style.opacity = '0';
+    btnRow.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    instrEl.style.opacity = '0';
+
+    stepEl.textContent = 'You reach the door and turn the knob, stepping back out into the night. The house locks behind you.';
+    setTimeout(() => {
+        stepEl.style.opacity = '1';
+        setTimeout(() => {
+            overlay.style.transition = 'opacity 1s';
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                continueAfterEncounter();
+            }, 1000);
+        }, 3000);
+    }, 200);
+}
+
+function darknessGameOver() {
+    const overlay = document.getElementById('darkness-puzzle-overlay');
+    overlay.innerHTML = '';
+
+    const img = document.createElement('img');
+    img.src = 'assets/inkyman.png';
+    img.style.cssText = `
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        opacity: 0; transition: opacity 0.25s ease;
+    `;
+    overlay.appendChild(img);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        img.style.opacity = '1';
+        setTimeout(() => {
+            overlay.remove();
+            G.customDeathTitle = 'Caught';
+            endGame(false, "They couldn't hold back.");
+        }, 600);
+    }));
+}
+
+function exitVillageBeset() {
+    const boardSvg    = document.getElementById('board');
+    const leafDisplay = document.getElementById('leaf-display');
+
+    boardSvg.style.opacity       = '0';
+    boardSvg.style.pointerEvents = 'none';
+    if (leafDisplay) leafDisplay.style.opacity = '0';
+
+    setTimeout(() => {
+        G.inVillageMap = false;
+        const layer = document.getElementById('village-layer');
+        if (layer) layer.remove();
+        const vpt = document.getElementById('village-player-token');
+        if (vpt) vpt.remove();
+
+        document.getElementById('hex-layer').removeAttribute('display');
+        document.getElementById('token-layer').removeAttribute('display');
+        document.getElementById('player-token-img').removeAttribute('display');
+
+        renderBoard();
+        boardSvg.style.opacity       = '1';
+        boardSvg.style.pointerEvents = '';
+        if (leafDisplay) leafDisplay.style.opacity = '1';
+    }, 950);
+}
 
 function playFaceOfStoneIntro() {
     // Create full-screen white overlay
@@ -4605,10 +5905,286 @@ function showFosQ3_goHome_noIDK(panel) {
     ]);
 }
 
+function showFosLonging(panel) {
+    fosSwapToResponse(panel, 'Ah, a kindred spirit. I can see that you have struggled for the past several years.', () => {
+        fosShowPanel(panel, 'Shall I send you to a better place?', [
+            { label: 'Yes.', onClick: () => showFosLongingYes(panel) },
+            { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'Then I will not.', () => showFosQ4_somethingElse(panel)) },
+        ]);
+    });
+}
+
+function fosLongingMakeDialog(questionText, choices, zIndex) {
+    const box = document.createElement('div');
+    box.style.cssText = `
+        position: fixed;
+        bottom: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255,255,255,0.88);
+        border: 1px solid #ccc;
+        padding: 20px 28px;
+        max-width: 480px;
+        width: 90%;
+        z-index: ${zIndex};
+        opacity: 0;
+        transition: opacity 0.8s ease;
+        font-family: var(--font);
+        text-align: center;
+    `;
+    const q = document.createElement('p');
+    q.textContent = questionText;
+    q.style.cssText = 'font-style: italic; margin: 0 0 16px; font-size: 0.95rem; color: #333;';
+    box.appendChild(q);
+
+    choices.forEach(({ label, onClick }) => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = label;
+        btn.style.cssText = 'display: block; width: 100%; margin-bottom: 8px;';
+        btn.addEventListener('click', () => {
+            box.querySelectorAll('button').forEach(b => { b.disabled = true; });
+            onClick(box);
+        });
+        box.appendChild(btn);
+    });
+
+    document.body.appendChild(box);
+    requestAnimationFrame(() => requestAnimationFrame(() => { box.style.opacity = '1'; }));
+    return box;
+}
+
+function fosLongingShowResponse(box, responseText, thenFn) {
+    box.style.opacity = '0';
+    setTimeout(() => {
+        box.innerHTML = '';
+        const resp = document.createElement('p');
+        resp.textContent = responseText;
+        resp.style.cssText = 'font-style: italic; margin: 0; font-size: 0.95rem; color: #333;';
+        box.appendChild(resp);
+        box.style.opacity = '1';
+        setTimeout(() => {
+            box.style.opacity = '0';
+            setTimeout(() => { box.remove(); thenFn(); }, 800);
+        }, 2400);
+    }, 800);
+}
+
+function fosLongingCrossfadeImg(prevImg, src, newZIndex, thenFn) {
+    const newImg = document.createElement('img');
+    newImg.src = src;
+    newImg.style.cssText = `
+        position: fixed; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        z-index: ${newZIndex}; opacity: 0; transition: opacity 2s ease;
+        pointer-events: none;
+    `;
+    document.body.appendChild(newImg);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        newImg.style.opacity = '1';
+    }));
+    // Wait for new image to fully fade in, then silently remove the one beneath
+    setTimeout(() => {
+        prevImg.remove();
+        if (thenFn) setTimeout(() => thenFn(newImg), 2000);
+    }, 2200);
+    return newImg;
+}
+
+function fosLongingCrossfadeToHouse(plainImg) {
+    fosLongingCrossfadeImg(plainImg, 'assets/foreverplainwhouse.png', 10001, (houseImg) => {
+        fosLongingShowHouseDialog(houseImg);
+    });
+}
+
+function fosLongingShowHouseDialog(houseImg) {
+    fosLongingMakeDialog('There. Added a house.', [
+        {
+            label: 'Very cozy.',
+            onClick: (box) => fosLongingShowResponse(box, 'Truly, and I can also give you somewhere to play.', () => {
+                fosLongingCrossfadeImg(houseImg, 'assets/foreverplainwstream.png', 10002, (streamImg) => {
+                    fosLongingShowStreamDialog(streamImg);
+                });
+            })
+        },
+        {
+            label: 'No water?',
+            onClick: (box) => fosLongingShowResponse(box, 'Very true, you need that don\'t you.', () => {
+                fosLongingCrossfadeImg(houseImg, 'assets/foreverplainwstream.png', 10002, (streamImg) => {
+                    fosLongingShowStreamDialog(streamImg);
+                });
+            })
+        },
+    ], 10002);
+}
+
+function fosLongingShowStreamDialog(streamImg) {
+    fosLongingMakeDialog('Something for the hotter days\u2026', [
+        {
+            label: "It'll be lovely.",
+            onClick: (box) => fosLongingShowResponse(box, 'Perhaps, but I believe you\'ll get lonely.', () => {
+                fosLongingCrossfadeImg(streamImg, 'assets/foreverplainwtown.png', 10003, (townImg) => {
+                    fosLongingShowTownDialog(townImg);
+                });
+            })
+        },
+        {
+            label: "I'll get lonely.",
+            onClick: (box) => fosLongingShowResponse(box, 'Yes, of course\u2026', () => {
+                fosLongingCrossfadeImg(streamImg, 'assets/foreverplainwtown.png', 10003, (townImg) => {
+                    fosLongingShowTownDialog(townImg);
+                });
+            })
+        },
+    ], 10003);
+}
+
+function fosLongingShowTownDialog(townImg) {
+    fosLongingMakeDialog('There, a town with people.', [
+        {
+            label: "I'll have lots of fun.",
+            onClick: (box) => fosLongingShowResponse(box, 'You need more than plains, though\u2026', () => {
+                fosLongingCrossfadeImg(townImg, 'assets/foreverplainwforest.png', 10004, (forestImg) => {
+                    fosLongingShowForestDialog(forestImg);
+                });
+            })
+        },
+        {
+            label: 'I will get bored here.',
+            onClick: (box) => fosLongingShowResponse(box, 'The world needs more beauty.', () => {
+                fosLongingCrossfadeImg(townImg, 'assets/foreverplainwforest.png', 10004, (forestImg) => {
+                    fosLongingShowForestDialog(forestImg);
+                });
+            })
+        },
+    ], 10004);
+}
+
+function fosLongingShowForestDialog(forestImg) {
+    fosLongingMakeDialog('The world is now full of life.', [
+        {
+            label: 'Good.',
+            onClick: (box) => fosLongingShowResponse(box, 'One last thing, a housewarming gift.', () => {
+                fosLongingCrossfadeImg(forestImg, 'assets/foreverplainwpicnic.png', 10005, (picnicImg) => {
+                    fosLongingShowFinalWords();
+                });
+            })
+        },
+        {
+            label: 'Wonderful.',
+            onClick: (box) => fosLongingShowResponse(box, 'One last thing, a housewarming gift.', () => {
+                fosLongingCrossfadeImg(forestImg, 'assets/foreverplainwpicnic.png', 10005, (picnicImg) => {
+                    fosLongingShowFinalWords();
+                });
+            })
+        },
+    ], 10005);
+}
+
+function fosLongingShowFinalWords() {
+    const box = document.createElement('div');
+    box.style.cssText = `
+        position: fixed;
+        bottom: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255,255,255,0.88);
+        border: 1px solid #ccc;
+        padding: 14px 22px;
+        z-index: 10006;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+        font-family: var(--font);
+        font-style: italic;
+        font-size: 0.95rem;
+        color: #333;
+        white-space: nowrap;
+    `;
+    box.textContent = "I\u2019m happy for you.";
+    document.body.appendChild(box);
+    requestAnimationFrame(() => requestAnimationFrame(() => { box.style.opacity = '1'; }));
+
+    setTimeout(() => {
+        box.style.opacity = '0';
+        setTimeout(() => {
+            box.remove();
+            document.getElementById('end-screen').style.zIndex = '10010';
+            endGame(true, 'You live a long life in a faraway land.', 'Happy.');
+        }, 800);
+    }, 3000);
+}
+
+function fosLongingShowDialog(plainImg) {
+    fosLongingMakeDialog('How is this for a home?', [
+        {
+            label: 'I like it.',
+            onClick: (box) => fosLongingShowResponse(box, 'Yes, but you probably need somewhere to stay, right?', () => fosLongingCrossfadeToHouse(plainImg))
+        },
+        {
+            label: "It's a bit sparse.",
+            onClick: (box) => fosLongingShowResponse(box, "You're right. You need somewhere to stay.", () => fosLongingCrossfadeToHouse(plainImg))
+        },
+    ], 10001);
+}
+
+function showFosLongingYes(panel) {
+    fosSwapToResponse(panel, 'Good, I can give you what you want.', () => {
+        const fosOverlay = document.getElementById('fos-overlay');
+        if (!fosOverlay) return;
+
+        // Black veil
+        const blackout = document.createElement('div');
+        blackout.style.cssText = `
+            position: fixed; inset: 0; background: #000;
+            z-index: 9999; opacity: 0; transition: opacity 1.2s ease;
+            pointer-events: none;
+        `;
+        document.body.appendChild(blackout);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            blackout.style.opacity = '1';
+        }));
+
+        setTimeout(() => {
+            fosOverlay.remove();
+            document.body.classList.remove('level4-invert');
+
+            // Plain image
+            const plainImg = document.createElement('img');
+            plainImg.src = 'assets/foreverplain.png';
+            plainImg.style.cssText = `
+                position: fixed; inset: 0;
+                width: 100%; height: 100%;
+                object-fit: cover;
+                z-index: 10000; opacity: 0; transition: opacity 2s ease;
+                pointer-events: none;
+            `;
+            document.body.appendChild(plainImg);
+
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                plainImg.style.opacity = '1';
+            }));
+
+            // Remove blackout only after image is fully visible — keeps UI hidden throughout
+            setTimeout(() => { blackout.remove(); }, 2000);
+
+            // After plain is fully visible, wait 2s then show dialog
+            setTimeout(() => { fosLongingShowDialog(plainImg); }, 4000);
+
+        }, 1400);
+    });
+}
+
 function showFosQ3_goHome(panel) {
-    fosShowPanel(panel, 'Do you want to go home?', [
+    const choices = [
         { label: 'Yes.',          onClick: () => fosGrantHomeEscape() },
         { label: 'Maybe.',        onClick: () => fosSwapToResponse(panel, 'You do not know? That is understandable. The woods entice some people.', () => showFosQ4_somethingElse(panel)) },
+    ];
+    if (G.player.attributes.includes('Longing')) {
+        choices.push({ label: 'Yes, but I want\u2026a different home.', onClick: () => showFosLonging(panel) });
+    }
+    choices.push(
         { label: 'No.',           onClick: () => fosSwapToResponse(panel, 'You do not wish to return home?', () => showFosQ3b_stayLost(panel)) },
         { label: "I don't know.", onClick: () => {
             // Fade out panel, show response text
@@ -4671,8 +6247,9 @@ function showFosQ3_goHome(panel) {
                     }, 600);
                 }, 4000);
             }, 700);
-        }},
-    ]);
+        }}
+    );
+    fosShowPanel(panel, 'Do you want to go home?', choices);
 }
 
 function showFosUniverse(panel) {
@@ -6589,6 +8166,8 @@ function resolveChoice(choice) {
     } else {
         outcome = choice.success;
     }
+
+    if (outcome.grantVillageTunnel) G.villageBesetTunnelUsed = true;
 
     if (outcome.collectLeaf) {
         collectLeaf();
@@ -8510,6 +10089,10 @@ function updateInventory() {
             div.classList.add('inventory-item-usable');
             div.addEventListener('click', showIncongruousStaffPrompt);
         }
+        if (item === 'Scrap of Metal') {
+            div.classList.add('inventory-item-usable');
+            div.addEventListener('click', () => showSimpleItemPrompt('Scrap of Metal', 'Use Scrap of Metal? (+0.2 Strength)', { strength: 0.2 }));
+        }
         if (item === 'Cookie') {
             div.classList.add('inventory-item-usable');
             div.addEventListener('click', () => showSimpleItemPrompt('Cookie', 'Eat the cookie? (+1 Health)', { health: 1 }));
@@ -8757,7 +10340,7 @@ function devTriggerEncounter() {
     const val = document.getElementById('dev-encounter-select').value;
     if (!val) return;
     const [level, id] = val.split(':');
-    if (level === '4' && id !== 'face_of_stone') document.body.classList.add('level4-invert');
+    if (level === '4' && id !== 'face_of_stone' && id !== 'village_beset' && id !== 'village_ruins') document.body.classList.add('level4-invert');
     const encounter = ENCOUNTERS[level].find(e => e.id === id);
     if (!encounter) return;
 
@@ -8771,6 +10354,10 @@ function devTriggerEncounter() {
     }
     if (encounter.id === 'face_of_stone') {
         playFaceOfStoneIntro();
+        return;
+    }
+    if (encounter.id === 'village_beset') {
+        playVillageBesetIntro();
         return;
     }
 
