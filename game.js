@@ -64,8 +64,8 @@ const ATTR_TOOLTIPS = {
     'Desecrator':               '1 in 2 chance any drawn Power Card becomes Damnation.',
     'Ecocidal':                 'Drawn reveal cards become remove cards instead.',
     'Honest':                   'No effect, but at least you aren\'t lying to yourself.',
-    'Longing':                  'No effect yet.',
-    'Tainted by Carcinogens':   'No effect yet.',
+    'Longing':                  'You yearn for a better life.',
+    'Tainted by Carcinogens':   'Unfit for consumption.',
     'Ascended':                 'You can\'t die.',
 };
 
@@ -2973,6 +2973,19 @@ const ENCOUNTERS = {
             ]
         },
         {
+            id: 'tainted_ignored',
+            title: 'Something has ignored you.',
+            description: 'A great unease fills your mind and you glance off into the darkness, fearing that your tracks have been followed. But...nothing is there. You can\'t help but feel that you\'ve been spared from some terrible end.',
+            choices: [
+                {
+                    text: 'Move on.',
+                    check: null,
+                    success: { text: '', effects: {} },
+                    failure: null
+                }
+            ]
+        },
+        {
             id: 'village',
             title: 'Village',
             description: '',
@@ -3758,6 +3771,12 @@ function triggerEncounter(hex) {
     const _STALKED_ENC_IDS = ['fearsome', 'creeping_darkness', 'something_wicked', 'freezing'];
     if (G.thirdPartyDead && _STALKED_ENC_IDS.includes(encounter.id)) {
         encounter = ENCOUNTERS[4].find(e => e.id === 'third_party_dead');
+        G.pendingEncounter.encounter = encounter;
+    }
+
+    // If player is Tainted by Carcinogens, the Third Party ignores them entirely
+    if (G.player.attributes.includes('Tainted by Carcinogens') && encounter.id === 'third_party') {
+        encounter = ENCOUNTERS[4].find(e => e.id === 'tainted_ignored');
         G.pendingEncounter.encounter = encounter;
     }
 
