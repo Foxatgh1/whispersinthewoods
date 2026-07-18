@@ -3470,6 +3470,7 @@ function initGame() {
     document.getElementById('end-screen').style.zIndex = '';
 
     renderBoard();
+    document.body.style.opacity = '1';
 }
 
 function placeLeafTokens() {

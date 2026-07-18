@@ -1216,6 +1216,11 @@ body.level4-invert #encounter-panel::before {
 /* ============================================================
    HOME PAGE
    ============================================================ */
+body.game-page {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
 body.home-page {
     background: #ffffff;
     display: flex;
