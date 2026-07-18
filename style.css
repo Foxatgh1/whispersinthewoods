@@ -389,6 +389,38 @@ body.level4-invert {
     border-color: #000000;
 }
 
+.kill-it-btn {
+    display: block;
+    margin-top: 14px;
+    background: #e5ffff;
+    border: 2px solid #74ffff;
+    color: #00ddff;
+    font-family: var(--font);
+    font-size: 17px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    padding: 10px 20px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transform: rotate(-0.6deg) skewX(-2deg);
+    animation: kill-it-pulse 1.4s ease-in-out infinite;
+}
+.kill-it-btn:hover {
+    background: #c5ffff;
+    border-color: #00ddff;
+}
+.kill-it-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+    animation: none;
+}
+@keyframes kill-it-pulse {
+    0%   { box-shadow: 0 0 4px #74ffff; }
+    50%  { box-shadow: 0 0 14px #00ddff; }
+    100% { box-shadow: 0 0 4px #74ffff; }
+}
+
 /* Dev popup */
 #dev-popup {
     position: fixed;

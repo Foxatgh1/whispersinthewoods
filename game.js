@@ -32,7 +32,7 @@ const ITEM_TOOLTIPS = {
     'Weird Bone':                   '+0.1 Strength for your next Strength check. Consumed on use.',
     'Walking Stick':                'Passively grants +0.1 Strength.',
     'Firestarter':                  'Required for certain encounter choices.',
-    'Eyeglass':                     'A pair of glasses found in the woods.',
+    'Eyeglass':                     '+0.2 Visibility when used. Consumed on use.',
     'Cookie':                       '+1 Health when eaten. Consumed on use.',
     'Mudball':                      '1 in 10 chance to succeed your next Speed check. One consumed on use.',
     'Void Gift':                    'Your hand is always refilled to 5 Power Cards.',
@@ -44,9 +44,9 @@ const ITEM_TOOLTIPS = {
     'Flamethrower':                 '+0.3 Visibility for your current encounter. Has limited uses.',
     'Food':                         'Can substitute for Food in certain encounter choices.',
     'First Aid Kit':                'Restores Health when used.',
-    'Bluebell':                     'Activate to use.',
-    'Phlox Flower':                 'Activate to use.',
-    'Incongruous Staff':            'Activate to use.',
+    'Bluebell':                     '+1 Peace of Mind when used. Consumed on use.',
+    'Phlox Flower':                 '-1 Peace of Mind when used. Consumed on use.',
+    'Incongruous Staff':            '+0.2 Strength when used. Consumed on use.',
 };
 
 const ATTR_TOOLTIPS = {
@@ -66,7 +66,7 @@ const ATTR_TOOLTIPS = {
     'Honest':                   'No effect, but at least you aren\'t lying to yourself.',
     'Longing':                  'No effect yet.',
     'Tainted by Carcinogens':   'No effect yet.',
-    'Ascended':                 'No effect yet.',
+    'Ascended':                 'You can\'t die.',
 };
 
 function attachTooltip(el, text) {
@@ -2960,6 +2960,19 @@ const ENCOUNTERS = {
             ]
         },
         {
+            id: 'third_party_dead',
+            title: 'At the end, nothing.',
+            description: 'You glance over your shoulder into the darkness, thinking that something might be stalking you, but nothing is there anymore.',
+            choices: [
+                {
+                    text: 'Move on.',
+                    check: null,
+                    success: { text: '', effects: {} },
+                    failure: null
+                }
+            ]
+        },
+        {
             id: 'village',
             title: 'Village',
             description: '',
@@ -3372,6 +3385,7 @@ function newGameState() {
         thirdPartyPlacated:  0,    // times the Third Party has been placated this encounter
         thirdPartyFedIt:     false, // Feed It can only be used once per encounter
         thirdPartyTriggered: false, // prevents stalked-path from firing more than once
+        thirdPartyDead:      false, // Third Party killed via Ascended sequence
         fosHelpedEscape:     false, // Face of Stone guided the player home
         peacefulWoods:       false, // Face restored the forest; all hexes become peaceful
         inVillageMap:        false, // player is navigating the village hex map
@@ -3437,6 +3451,10 @@ function initGame() {
     if (existingOverlay) existingOverlay.remove();
     const existingFosOverlay = document.getElementById('fos-overlay');
     if (existingFosOverlay) existingFosOverlay.remove();
+    const darknessPuzzle = document.getElementById('darkness-puzzle-overlay');
+    if (darknessPuzzle) darknessPuzzle.remove();
+    document.getElementById('ep-continue').onclick = continueAfterEncounter;
+    document.getElementById('end-screen').style.zIndex = '';
 
     renderBoard();
 }
@@ -3736,6 +3754,13 @@ function triggerEncounter(hex) {
         return;
     }
 
+    // When the Third Party is dead, replace all encounters that could increase Stalked
+    const _STALKED_ENC_IDS = ['fearsome', 'creeping_darkness', 'something_wicked', 'freezing'];
+    if (G.thirdPartyDead && _STALKED_ENC_IDS.includes(encounter.id)) {
+        encounter = ENCOUNTERS[4].find(e => e.id === 'third_party_dead');
+        G.pendingEncounter.encounter = encounter;
+    }
+
     // One-time encounters
     if (encounter.id === 'its_getting_late') {
         if (G.gettingLateSeen) { continueAfterEncounter(); return; }
@@ -3902,6 +3927,11 @@ function playThirdPartyIntro(enc) {
     G.thirdPartyPlacated = 0;
     G.thirdPartyFedIt    = false;
 
+    // Reset kill-it sequence
+    _kiStage = 0; _kiBusy = false;
+    if (_kiCanvas) { _kiCanvas.remove(); _kiCanvas = null; _kiCtx = null; }
+    _kiSegs = []; _kiFill = 0;
+
     // Set up encounter content invisibly in the background
     document.getElementById('ep-idle').style.display = 'none';
     document.getElementById('ep-result').classList.add('hidden');
@@ -3941,7 +3971,11 @@ function playThirdPartyIntro(enc) {
                         descEl.style.transition = 'opacity 0.4s ease';
                         descEl.style.opacity    = '1';
                     }, 120);
-                    renderEncounterChoices(enc, 240);
+                    if (G.player.attributes.includes('Ascended')) {
+                        setTimeout(() => showThirdPartyAscendedChoices(false), 240);
+                    } else {
+                        renderEncounterChoices(enc, 240);
+                    }
                 }, 800);
             }, 1400);
             return;
@@ -3962,6 +3996,228 @@ function playThirdPartyIntro(enc) {
 // ============================================================
 // FACE OF STONE ENCOUNTER
 // ============================================================
+
+// ─── Third Party — Ascended variant ──────────────────────────
+
+function tpAscShowResult(text, thenFn) {
+    document.getElementById('ep-roll').textContent = '';
+    showResultText(text, []);
+    document.getElementById('ep-choices').innerHTML = '';
+    document.getElementById('ep-result').classList.remove('hidden');
+    document.getElementById('ep-continue').style.display = 'none';
+    clearSubChoiceButtons();
+    thenFn();
+}
+
+function showThirdPartyAscendedChoices(warningUsed, startDelay = 80) {
+    const choicesEl = document.getElementById('ep-choices');
+    document.getElementById('ep-result').classList.add('hidden');
+    document.getElementById('ep-roll').textContent = '';
+    clearSubChoiceButtons();
+    choicesEl.innerHTML = '';
+
+    const choices = [
+        {
+            text: 'Get ready.',
+            show: true,
+            action: () => {
+                tpAscShowResult('...', () => {
+                    const killBtn = document.createElement('button');
+                    killBtn.className = 'kill-it-btn';
+                    killBtn.textContent = 'KILL IT';
+                    killBtn.addEventListener('click', () => resolveKillIt(killBtn));
+                    document.getElementById('ep-result').appendChild(killBtn);
+                });
+            }
+        },
+        {
+            text: 'Issue a warning.',
+            show: !warningUsed,
+            action: () => {
+                tpAscShowResult('It glares down at you warily, but does not back off.', () => {
+                    addSubChoiceButton('Continue.', () => showThirdPartyAscendedChoices(true));
+                });
+            }
+        },
+        {
+            text: 'Do nothing.',
+            show: true,
+            action: () => {
+                tpAscShowResult('The creature does not move either.', () => {
+                    addSubChoiceButton('Continue.', () => showThirdPartyAscendedChoices(warningUsed));
+                });
+            }
+        }
+    ];
+
+    choices.filter(c => c.show).forEach((choice, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.style.opacity = '0';
+        const textSpan = document.createElement('span');
+        textSpan.textContent = choice.text;
+        btn.appendChild(textSpan);
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+            choice.action();
+        });
+        choicesEl.appendChild(btn);
+        setTimeout(() => { btn.classList.add('fade-in'); }, startDelay + 120 * idx);
+    });
+}
+
+// ─── Kill It Sequence ─────────────────────────────────────────
+
+let _kiStage  = 0;
+let _kiCanvas = null;
+let _kiCtx    = null;
+let _kiSegs   = [];
+let _kiFill   = 0;
+let _kiBusy   = false;
+
+const _KI_STAGES = [
+    { nextLabel: 'KILL IT!',       trees: 4,  seed: 4001 },
+    { nextLabel: 'KILL IT!!!',     trees: 7,  seed: 4002 },
+    { nextLabel: 'KILL IT!!!!!',   trees: 11, seed: 4003 },
+    { nextLabel: 'KILL IT!!!!!!!', trees: 17, seed: 4004 },
+    { nextLabel: 'ANNIHILATION',   trees: 26, seed: 4005 },
+];
+
+function _kiPRNG(seed) {
+    let s = seed >>> 0;
+    return () => {
+        s = Math.imul(s ^ (s >>> 15), s | 1);
+        s ^= s + Math.imul(s ^ (s >>> 7), s | 61);
+        return ((s ^ (s >>> 14)) >>> 0) / 0x100000000;
+    };
+}
+
+function _kiCrackTree(rand, x, y, angle, len, depth) {
+    if (len < 10 || depth > 5) return [];
+    const segs = [];
+    let cx = x, cy = y, a = angle, remaining = len;
+    // Short straight segments with sharp discrete kinks at each joint (glass-like)
+    while (remaining > 0) {
+        const segLen = Math.min(remaining, 12 + rand() * 22);
+        const nx = cx + Math.cos(a) * segLen;
+        const ny = cy + Math.sin(a) * segLen;
+        segs.push({ x1: cx, y1: cy, x2: nx, y2: ny, w: Math.max(0.4, (5 - depth) * 0.55) });
+        cx = nx; cy = ny;
+        remaining -= segLen;
+        // Sharp kink at joint — discrete angle change, not accumulated drift
+        a += (rand() - 0.5) * 0.65;
+    }
+    const branches = depth === 0 ? 3 : rand() < 0.65 ? 2 : 1;
+    for (let b = 0; b < branches; b++) {
+        const ba = a + (rand() - 0.5) * Math.PI * 0.75;
+        segs.push(..._kiCrackTree(rand, cx, cy, ba, len * (0.45 + rand() * 0.25), depth + 1));
+    }
+    return segs;
+}
+
+function _kiRedraw() {
+    const w = _kiCanvas.width, h = _kiCanvas.height;
+    _kiCtx.clearRect(0, 0, w, h);
+    if (_kiFill > 0) {
+        _kiCtx.fillStyle = `rgba(0,0,0,${_kiFill})`;
+        _kiCtx.fillRect(0, 0, w, h);
+    }
+    _kiSegs.forEach(s => {
+        _kiCtx.beginPath();
+        _kiCtx.moveTo(s.x1, s.y1);
+        _kiCtx.lineTo(s.x2, s.y2);
+        _kiCtx.strokeStyle = 'rgba(0,0,0,0.95)';
+        _kiCtx.lineWidth = s.w;
+        _kiCtx.stroke();
+    });
+}
+
+function resolveKillIt(btn) {
+    if (_kiBusy) return;
+
+    // Final click (ANNIHILATION) — full white fade, then return to UI
+    if (_kiStage >= _KI_STAGES.length) {
+        _kiBusy = true;
+        btn.disabled = true;
+        const whiteOut = document.createElement('div');
+        whiteOut.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9001;opacity:0;transition:opacity 0.9s ease;pointer-events:none;';
+        document.body.appendChild(whiteOut);
+        requestAnimationFrame(() => { whiteOut.style.opacity = '1'; });
+        setTimeout(() => {
+            // Kill the Third Party — replace all board instances, clear stalked
+            G.thirdPartyDead = true;
+            G.player.stalked = 0;
+            const deadEnc = ENCOUNTERS[4].find(e => e.id === 'third_party_dead');
+            Object.values(G.board).forEach(hex => {
+                if (hex.encounters[4] && hex.encounters[4].id === 'third_party') {
+                    hex.encounters[4] = deadEnc;
+                }
+            });
+            updateStats();
+            continueAfterEncounter();
+            if (_kiCanvas) _kiCanvas.remove();
+            _kiCanvas = null; _kiCtx = null; _kiSegs = []; _kiFill = 0;
+            _kiStage = 0; _kiBusy = false;
+            whiteOut.style.transition = 'opacity 1.3s ease';
+            whiteOut.style.opacity = '0';
+            setTimeout(() => { whiteOut.remove(); }, 1300);
+        }, 900);
+        return;
+    }
+
+    _kiBusy = true;
+    btn.disabled = true;
+
+    const stage = _KI_STAGES[_kiStage];
+    _kiStage++;
+
+    // Create canvas on first click
+    if (!_kiCanvas) {
+        _kiCanvas = document.createElement('canvas');
+        _kiCanvas.width  = window.innerWidth;
+        _kiCanvas.height = window.innerHeight;
+        _kiCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9000;';
+        document.body.appendChild(_kiCanvas);
+        _kiCtx = _kiCanvas.getContext('2d');
+    }
+
+    // Origin = button center
+    const rect = btn.getBoundingClientRect();
+    const ox   = rect.left + rect.width  / 2;
+    const oy   = rect.top  + rect.height / 2;
+    const maxR = Math.hypot(window.innerWidth, window.innerHeight) * 0.55;
+
+    // Generate new crack segments for this stage
+    const rand    = _kiPRNG(stage.seed);
+    const newSegs = [];
+    for (let t = 0; t < stage.trees; t++) {
+        const angle = rand() * Math.PI * 2;
+        const len   = 60 + rand() * maxR;
+        newSegs.push(..._kiCrackTree(rand, ox, oy, angle, len, 0));
+    }
+
+    // Animate cracks growing over ~600ms
+    const totalFrames = 36;
+    const perFrame    = Math.max(1, Math.ceil(newSegs.length / totalFrames));
+    let frame = 0, drawn = 0;
+
+    (function step() {
+        frame++;
+        const end = Math.min(newSegs.length, drawn + perFrame);
+        for (let i = drawn; i < end; i++) _kiSegs.push(newSegs[i]);
+        drawn = end;
+        _kiRedraw();
+
+        if (frame < totalFrames) {
+            requestAnimationFrame(step);
+        } else {
+            _kiRedraw();
+            btn.textContent = stage.nextLabel;
+            btn.disabled = false;
+            _kiBusy = false;
+        }
+    })();
+}
 
 // ============================================================
 // Village Beset functions
@@ -5168,7 +5424,13 @@ function showFosKnowledge(panel) {
 function showFosPower(panel) {
     fosSwapToResponse(panel, 'Others have come for my power, but it killed them.', () => {
         fosShowPanel(panel, 'Do you really want all of it?', [
-            { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'You will regret this.', () => playFosPowerChaoticDeath()) },
+            { label: 'Yes.', onClick: () => {
+                const ascended = G.player.attributes.includes('Ascended');
+                fosSwapToResponse(panel,
+                    ascended ? 'You may be able to stand it.' : 'You will regret this.',
+                    () => ascended ? playFosAscendedPowerScene() : playFosPowerChaoticDeath()
+                );
+            }},
             { label: 'No.',  onClick: () => fosSwapToResponse(panel, 'I thought not, though I doubt you will be thrilled with even a fraction of my power either.', () => {
                 fosShowPanel(panel, 'Shall I give you a fraction then?', [
                     { label: 'Yes.', onClick: () => fosSwapToResponse(panel, 'I will give you what you can handle.', () => showFosFractionScene(panel)) },
@@ -6629,6 +6891,130 @@ const FOS_CHAOS_WORDS = [
     'Rupture','Blind','Gnaw','Writhe','Unravel','Sovereign','Splinter','Implode',
     'Erase','Suffer','Wither','Corrode','Annihilate'
 ];
+
+function fosSpawnFloatingFace(overlay) {
+    const img   = document.createElement('img');
+    img.src     = 'assets/faceofstone.png';
+
+    const size    = 80  + Math.random() * 200;
+    const angle   = Math.random() * Math.PI * 2;
+    const dist    = 0.25 + Math.random() * 0.50;
+    const sw      = window.innerWidth;
+    const sh      = window.innerHeight;
+    const startX  = sw / 2 - size / 2;
+    const startY  = sh / 2 - size / 2;
+    const endX    = sw / 2 + Math.cos(angle) * sw * dist - size / 2;
+    const endY    = sh / 2 + Math.sin(angle) * sh * dist - size / 2;
+    const dur     = 1800 + Math.random() * 1400;
+    const opacity = 0.20 + Math.random() * 0.35;
+
+    img.style.cssText = `
+        position: absolute;
+        left: ${startX}px; top: ${startY}px;
+        width: ${size}px; height: ${size}px;
+        opacity: 0;
+        mix-blend-mode: multiply;
+        pointer-events: none;
+        z-index: 2;
+        transition: left ${dur}ms ease-out, top ${dur}ms ease-out, opacity ${dur * 0.35}ms ease;
+    `;
+    overlay.appendChild(img);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        img.style.left    = `${endX}px`;
+        img.style.top     = `${endY}px`;
+        img.style.opacity = String(opacity);
+    }));
+
+    setTimeout(() => {
+        img.style.transition = `opacity ${dur * 0.25}ms ease`;
+        img.style.opacity    = '0';
+        setTimeout(() => img.remove(), dur * 0.25 + 100);
+    }, dur * 0.72);
+}
+
+function playFosAscendedPowerScene() {
+    const overlay = document.getElementById('fos-overlay');
+    if (!overlay) return;
+
+    // Fade out all panels, leave the face image
+    overlay.querySelectorAll('div').forEach(el => {
+        el.style.transition = 'opacity 0.4s ease';
+        el.style.opacity    = '0';
+        setTimeout(() => el.remove(), 500);
+    });
+
+    // Slide the face back to center (it was shifted right when clicked)
+    const faceImg = overlay.querySelector('img');
+    if (faceImg) {
+        faceImg.style.transition = 'transform 0.9s ease';
+        faceImg.style.transform  = 'translateX(0)';
+    }
+
+    setTimeout(() => {
+        let spawnInterval = 1500;
+        let spawnCount    = 1;
+        let elapsed       = 0;
+        let stopped       = false;
+
+        function scheduleNext() {
+            if (stopped) return;
+            setTimeout(() => {
+                if (stopped) return;
+                for (let i = 0; i < spawnCount; i++) fosSpawnFloatingFace(overlay);
+
+                elapsed      += spawnInterval;
+                spawnInterval = Math.max(100, spawnInterval * 0.83);
+                if (elapsed > 5000)  spawnCount = 2;
+                if (elapsed > 8000)  spawnCount = 4;
+                if (elapsed > 10500) spawnCount = 6;
+
+                if (elapsed < 13000) {
+                    scheduleNext();
+                } else {
+                    stopped = true;
+                    overlay.style.transition = 'background 2s ease';
+                    overlay.style.background = '#000';
+                    // After black fades in, show the reverse Konami prompt
+                    setTimeout(() => {
+                        const prompt = document.createElement('img');
+                        prompt.src = 'assets/reversekonami.png';
+                        prompt.style.cssText = `
+                            position: absolute;
+                            left: 50%; top: 50%;
+                            transform: translate(-50%, -50%);
+                            max-width: 70%; max-height: 40%;
+                            opacity: 0;
+                            transition: opacity 1.4s ease;
+                            pointer-events: none;
+                            z-index: 10;
+                        `;
+                        overlay.appendChild(prompt);
+                        requestAnimationFrame(() => requestAnimationFrame(() => {
+                            prompt.style.opacity = '1';
+                        }));
+
+                        // Next click fades out the prompt, then shows the ending
+                        overlay.addEventListener('click', () => {
+                            prompt.style.transition = 'opacity 0.8s ease';
+                            prompt.style.opacity    = '0';
+                            setTimeout(() => {
+                                prompt.remove();
+                                setTimeout(() => {
+                                    document.getElementById('end-screen').style.zIndex = '10010';
+                                    endGame(true, 'You may now know all my secrets.', 'Heavenly.');
+                                    setTimeout(() => overlay.remove(), 600);
+                                }, 1000);
+                            }, 800);
+                        }, { once: true });
+                    }, 2200);
+                }
+            }, spawnInterval);
+        }
+
+        scheduleNext();
+    }, 600);
+}
 
 function playFosPowerChaoticDeath() {
     const overlay = document.getElementById('fos-overlay');
@@ -8606,7 +8992,10 @@ function continueAfterEncounter() {
         G.thirdPartyTriggered = true;
         const enc = ENCOUNTERS[4].find(e => e.id === 'third_party');
         if (enc) {
-            triggerEncounter(enc);
+            const hex = G.board[hk(G.player.q, G.player.r)];
+            G.pendingEncounter = { encounter: enc, hex };
+            document.body.classList.add('level4-invert');
+            playThirdPartyIntro(enc);
             return;
         }
     }
@@ -9741,7 +10130,8 @@ function applyEffects(effects) {
         if (!delta) continue;
 
         if (stat === 'health') {
-            G.player.health = clamp(G.player.health + delta, 0, 12);
+            const healthMin = G.player.attributes.includes('Ascended') ? 1 : 0;
+            G.player.health = clamp(G.player.health + delta, healthMin, 12);
             lines.push(delta < 0 ? `Health ${delta}` : `Health +${delta}`);
 
         } else if (stat === 'peaceOfMind') {
@@ -9766,8 +10156,10 @@ function applyEffects(effects) {
             // No display line
 
         } else if (stat === 'stalked') {
-            G.player.stalked += delta;
-            lines.push({ html: `<span class="stalked-label">Stalked</span> +${delta}` });
+            if (!G.thirdPartyDead) {
+                G.player.stalked += delta;
+                lines.push({ html: `<span class="stalked-label">Stalked</span> +${delta}` });
+            }
 
         } else if (stat === 'usesFlashlight') {
             G.flashlightUses--;
@@ -9919,7 +10311,7 @@ function collectLeaf() {
 }
 
 function checkLoss() {
-    if (G.player.health <= 0) {
+    if (G.player.health <= 0 && !G.player.attributes.includes('Ascended')) {
         endGame(false, 'Your body gives out in the dark. The woods close in around you. You are very still.');
         return true;
     }
@@ -9981,7 +10373,7 @@ function endGame(win, message, title) {
 // ============================================================
 function updateStats() {
     const p = G.player;
-    document.getElementById('health-value').textContent    = p.health;
+    document.getElementById('health-value').textContent    = p.attributes.includes('Ascended') ? '∞' : p.health;
     document.getElementById('pom-value').textContent       = p.peaceOfMind;
     document.getElementById('knowledge-value').textContent = p.knowledge;
 
@@ -11740,6 +12132,25 @@ window.addEventListener('DOMContentLoaded', () => {
     populateDevPanel();
 });
 
+const _DEV_SEQUENCE = [
+    'Enter', 'a', 'b',
+    'ArrowRight', 'ArrowLeft', 'ArrowRight', 'ArrowLeft',
+    'ArrowDown', 'ArrowDown', 'ArrowUp', 'ArrowUp'
+];
+let _devSeqIdx = 0;
+
 window.addEventListener('keydown', e => {
-    if (e.key === 't' || e.key === 'T') toggleDevPopup();
+    if (e.key === 't' || e.key === 'T') { toggleDevPopup(); return; }
+
+    // Secret sequence: Enter A B → ← → ← ↓ ↓ ↑ ↑
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (key === _DEV_SEQUENCE[_devSeqIdx]) {
+        _devSeqIdx++;
+        if (_devSeqIdx >= _DEV_SEQUENCE.length) {
+            _devSeqIdx = 0;
+            toggleDevPopup();
+        }
+    } else {
+        _devSeqIdx = (key === _DEV_SEQUENCE[0]) ? 1 : 0;
+    }
 });
