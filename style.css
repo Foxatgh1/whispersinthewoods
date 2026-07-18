@@ -1212,3 +1212,52 @@ body.level4-invert #encounter-panel::before {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-light); }
+
+/* ============================================================
+   HOME PAGE
+   ============================================================ */
+body.home-page {
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: var(--font);
+}
+
+#home-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+}
+
+#home-logo {
+    width: min(600px, 90vw);
+}
+
+#home-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.home-btn {
+    font-family: var(--font);
+    font-size: 18px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: none;
+    border: 1.5px solid #000;
+    color: #000;
+    padding: 10px 48px;
+    cursor: pointer;
+    width: 220px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.home-btn:hover {
+    background: #000;
+    color: #fff;
+}
