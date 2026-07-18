@@ -8951,6 +8951,12 @@ function rollNextDualCheck() {
 }
 
 function continueAfterEncounter() {
+    // Decrement temporary debuffs once per turn
+    Object.keys(G.statDebuffs).forEach(stat => {
+        G.statDebuffs[stat].usesRemaining--;
+        if (G.statDebuffs[stat].usesRemaining <= 0) delete G.statDebuffs[stat];
+    });
+
     document.body.classList.remove('level4-invert');
     G.phase           = 'move';
     G.pendingEncounter = null;
@@ -10622,8 +10628,6 @@ function applyDebuff(stat, base) {
     const db = G.statDebuffs[stat];
     if (!db) return { base, note: '' };
     const adjusted = parseFloat((base + db.amount).toFixed(1));
-    db.usesRemaining--;
-    if (db.usesRemaining <= 0) delete G.statDebuffs[stat];
     return { base: adjusted, note: ' (debuffed)' };
 }
 
@@ -10802,11 +10806,7 @@ function showLightsCavesSubChoices() {
         clearSubChoiceButtons();
         const roll = rollD10();
         let base = G.player.visibility;
-        if (G.statDebuffs.visibility) {
-            base += G.statDebuffs.visibility.amount;
-            G.statDebuffs.visibility.usesRemaining--;
-            if (G.statDebuffs.visibility.usesRemaining <= 0) delete G.statDebuffs.visibility;
-        }
+        if (G.statDebuffs.visibility) base += G.statDebuffs.visibility.amount;
         const result = parseFloat((base + roll * 0.1).toFixed(1));
         const success = result >= 1.7;
         document.getElementById('ep-roll').textContent = `visibility ${base.toFixed(1)} + ${(roll * 0.1).toFixed(1)} = ${result.toFixed(1)} vs 1.7 — ${success ? 'SUCCESS' : 'FAILURE'}`;
@@ -11058,11 +11058,7 @@ function nostalgiaRollDual(checks) {
     for (const { stat, target } of checks) {
         const roll = rollD10();
         let base = G.player[stat];
-        if (G.statDebuffs[stat]) {
-            base += G.statDebuffs[stat].amount;
-            G.statDebuffs[stat].usesRemaining--;
-            if (G.statDebuffs[stat].usesRemaining <= 0) delete G.statDebuffs[stat];
-        }
+        if (G.statDebuffs[stat]) base += G.statDebuffs[stat].amount;
         if (G.powerCardBoost && G.powerCardBoost.stat === stat) {
             base = +(base + G.powerCardBoost.amount).toFixed(1);
             G.powerCardBoost = null;
@@ -11283,11 +11279,7 @@ function showChanceEncounterTalkSubChoices() {
         const pomHit = pomResult >= 11;
         const r2 = rollD10();
         let visBase = G.player.visibility;
-        if (G.statDebuffs.visibility) {
-            visBase += G.statDebuffs.visibility.amount;
-            G.statDebuffs.visibility.usesRemaining--;
-            if (G.statDebuffs.visibility.usesRemaining <= 0) delete G.statDebuffs.visibility;
-        }
+        if (G.statDebuffs.visibility) visBase += G.statDebuffs.visibility.amount;
         const visResult = +(visBase + r2 * 0.1).toFixed(1);
         const visHit = visResult >= 1.4;
         const success = pomHit && visHit;
@@ -11328,11 +11320,7 @@ function showChanceEncounterInquireSubChoices() {
         const pomHit = pomResult >= 12;
         const r2 = rollD10();
         let visBase = G.player.visibility;
-        if (G.statDebuffs.visibility) {
-            visBase += G.statDebuffs.visibility.amount;
-            G.statDebuffs.visibility.usesRemaining--;
-            if (G.statDebuffs.visibility.usesRemaining <= 0) delete G.statDebuffs.visibility;
-        }
+        if (G.statDebuffs.visibility) visBase += G.statDebuffs.visibility.amount;
         const visResult = +(visBase + r2 * 0.1).toFixed(1);
         const visHit = visResult >= 1.5;
         const success = pomHit && visHit;
