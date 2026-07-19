@@ -4291,7 +4291,7 @@ function placeVillagePlayerToken(animate) {
     if (!token) {
         token = document.createElementNS('http://www.w3.org/2000/svg', 'image');
         token.setAttribute('id',            'village-player-token');
-        token.setAttribute('href',          'assets/accountantglasses.png');
+        token.setAttribute('href',          'assets/accountantglasses.webp');
         token.setAttribute('x',            -tw / 2);
         token.setAttribute('y',            -th / 2);
         token.setAttribute('width',         tw);
@@ -5251,7 +5251,7 @@ function darknessGameOver() {
     overlay.innerHTML = '';
 
     const img = document.createElement('img');
-    img.src = 'assets/inkyman.png';
+    img.src = 'assets/inkyman.webp';
     img.style.cssText = `
         position: absolute; inset: 0;
         width: 100%; height: 100%;
@@ -5310,7 +5310,7 @@ function playFaceOfStoneIntro() {
 
     // Image element, starts invisible
     const img = document.createElement('img');
-    img.src = 'assets/faceofstone.png';
+    img.src = 'assets/faceofstone.webp';
     img.style.cssText = `
         max-width: 480px; max-height: 480px;
         opacity: 0; transition: opacity 2s ease;
@@ -5753,7 +5753,7 @@ function showFosMoonHexBox() {
     // Token — always fixed at center of box
     const TOKEN_W = 100, TOKEN_H = 70;
     const tokenImg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-    tokenImg.setAttribute('href', 'assets/accountantglasses.png');
+    tokenImg.setAttribute('href', 'assets/accountantglasses.webp');
     tokenImg.setAttribute('width',  TOKEN_W);
     tokenImg.setAttribute('height', TOKEN_H);
     tokenImg.setAttribute('x', CENTER - TOKEN_W / 2);
@@ -5913,7 +5913,7 @@ function showFosMoonscape(panel) {
             if (fosOverlay) fosOverlay.innerHTML = '';
 
             const moonImg = document.createElement('img');
-            moonImg.src = 'assets/TheMoonscape.png';
+            moonImg.src = 'assets/TheMoonscape.webp';
             moonImg.style.cssText = `
                 position: absolute;
                 inset: 0;
@@ -5983,7 +5983,7 @@ function showFosNewRiverGorge(panel) {
         if (fosOverlay) fosOverlay.innerHTML = '';
 
         const gorgeImg = document.createElement('img');
-        gorgeImg.src = 'assets/newrivergorge.png';
+        gorgeImg.src = 'assets/newrivergorge.webp';
         gorgeImg.style.cssText = `
             position: absolute;
             inset: 0;
@@ -6050,7 +6050,7 @@ function showFosCharleston(panel) {
             fosOverlay.innerHTML = '';
 
             const cityImg = document.createElement('img');
-            cityImg.src = 'assets/charlestonatnight.png';
+            cityImg.src = 'assets/charlestonatnight.webp';
             cityImg.style.cssText = `
                 position: absolute;
                 inset: 0;
@@ -6293,7 +6293,7 @@ function fosLongingCrossfadeImg(prevImg, src, newZIndex, thenFn) {
 }
 
 function fosLongingCrossfadeToHouse(plainImg) {
-    fosLongingCrossfadeImg(plainImg, 'assets/foreverplainwhouse.png', 10001, (houseImg) => {
+    fosLongingCrossfadeImg(plainImg, 'assets/foreverplainwhouse.webp', 10001, (houseImg) => {
         fosLongingShowHouseDialog(houseImg);
     });
 }
@@ -6303,7 +6303,7 @@ function fosLongingShowHouseDialog(houseImg) {
         {
             label: 'Very cozy.',
             onClick: (box) => fosLongingShowResponse(box, 'Truly, and I can also give you somewhere to play.', () => {
-                fosLongingCrossfadeImg(houseImg, 'assets/foreverplainwstream.png', 10002, (streamImg) => {
+                fosLongingCrossfadeImg(houseImg, 'assets/foreverplainwstream.webp', 10002, (streamImg) => {
                     fosLongingShowStreamDialog(streamImg);
                 });
             })
@@ -6311,7 +6311,7 @@ function fosLongingShowHouseDialog(houseImg) {
         {
             label: 'No water?',
             onClick: (box) => fosLongingShowResponse(box, 'Very true, you need that don\'t you.', () => {
-                fosLongingCrossfadeImg(houseImg, 'assets/foreverplainwstream.png', 10002, (streamImg) => {
+                fosLongingCrossfadeImg(houseImg, 'assets/foreverplainwstream.webp', 10002, (streamImg) => {
                     fosLongingShowStreamDialog(streamImg);
                 });
             })
@@ -6324,7 +6324,7 @@ function fosLongingShowStreamDialog(streamImg) {
         {
             label: "It'll be lovely.",
             onClick: (box) => fosLongingShowResponse(box, 'Perhaps, but I believe you\'ll get lonely.', () => {
-                fosLongingCrossfadeImg(streamImg, 'assets/foreverplainwtown.png', 10003, (townImg) => {
+                fosLongingCrossfadeImg(streamImg, 'assets/foreverplainwtown.webp', 10003, (townImg) => {
                     fosLongingShowTownDialog(townImg);
                 });
             })
@@ -6332,7 +6332,7 @@ function fosLongingShowStreamDialog(streamImg) {
         {
             label: "I'll get lonely.",
             onClick: (box) => fosLongingShowResponse(box, 'Yes, of course\u2026', () => {
-                fosLongingCrossfadeImg(streamImg, 'assets/foreverplainwtown.png', 10003, (townImg) => {
+                fosLongingCrossfadeImg(streamImg, 'assets/foreverplainwtown.webp', 10003, (townImg) => {
                     fosLongingShowTownDialog(townImg);
                 });
             })
@@ -6345,7 +6345,7 @@ function fosLongingShowTownDialog(townImg) {
         {
             label: "I'll have lots of fun.",
             onClick: (box) => fosLongingShowResponse(box, 'You need more than plains, though\u2026', () => {
-                fosLongingCrossfadeImg(townImg, 'assets/foreverplainwforest.png', 10004, (forestImg) => {
+                fosLongingCrossfadeImg(townImg, 'assets/foreverplainwforest.webp', 10004, (forestImg) => {
                     fosLongingShowForestDialog(forestImg);
                 });
             })
@@ -6353,7 +6353,7 @@ function fosLongingShowTownDialog(townImg) {
         {
             label: 'I will get bored here.',
             onClick: (box) => fosLongingShowResponse(box, 'The world needs more beauty.', () => {
-                fosLongingCrossfadeImg(townImg, 'assets/foreverplainwforest.png', 10004, (forestImg) => {
+                fosLongingCrossfadeImg(townImg, 'assets/foreverplainwforest.webp', 10004, (forestImg) => {
                     fosLongingShowForestDialog(forestImg);
                 });
             })
@@ -6366,7 +6366,7 @@ function fosLongingShowForestDialog(forestImg) {
         {
             label: 'Good.',
             onClick: (box) => fosLongingShowResponse(box, 'One last thing, a housewarming gift.', () => {
-                fosLongingCrossfadeImg(forestImg, 'assets/foreverplainwpicnic.png', 10005, (picnicImg) => {
+                fosLongingCrossfadeImg(forestImg, 'assets/foreverplainwpicnic.webp', 10005, (picnicImg) => {
                     fosLongingShowFinalWords();
                 });
             })
@@ -6374,7 +6374,7 @@ function fosLongingShowForestDialog(forestImg) {
         {
             label: 'Wonderful.',
             onClick: (box) => fosLongingShowResponse(box, 'One last thing, a housewarming gift.', () => {
-                fosLongingCrossfadeImg(forestImg, 'assets/foreverplainwpicnic.png', 10005, (picnicImg) => {
+                fosLongingCrossfadeImg(forestImg, 'assets/foreverplainwpicnic.webp', 10005, (picnicImg) => {
                     fosLongingShowFinalWords();
                 });
             })
@@ -6452,7 +6452,7 @@ function showFosLongingYes(panel) {
 
             // Plain image
             const plainImg = document.createElement('img');
-            plainImg.src = 'assets/foreverplain.png';
+            plainImg.src = 'assets/foreverplain.webp';
             plainImg.style.cssText = `
                 position: fixed; inset: 0;
                 width: 100%; height: 100%;
@@ -6573,31 +6573,31 @@ function showFosUniverse(panel) {
         `;
 
         const img1 = document.createElement('img');
-        img1.src = 'assets/milkyway1.png';
+        img1.src = 'assets/milkyway1.webp';
         img1.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 1.8s ease;';
 
         const img2 = document.createElement('img');
-        img2.src = 'assets/milkyway2.png';
+        img2.src = 'assets/milkyway2.webp';
         img2.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 7s ease;';
 
         const img3 = document.createElement('img');
-        img3.src = 'assets/milkyway3.png';
+        img3.src = 'assets/milkyway3.webp';
         img3.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 2s ease;';
 
         const img4 = document.createElement('img');
-        img4.src = 'assets/milkyway4.png';
+        img4.src = 'assets/milkyway4.webp';
         img4.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.5s ease;';
 
         const img5 = document.createElement('img');
-        img5.src = 'assets/milkyway5.png';
+        img5.src = 'assets/milkyway5.webp';
         img5.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.2s ease;';
 
         const img6 = document.createElement('img');
-        img6.src = 'assets/milkyway6.png';
+        img6.src = 'assets/milkyway6.webp';
         img6.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.05s ease;';
 
         const img7 = document.createElement('img');
-        img7.src = 'assets/milkyway7.png';
+        img7.src = 'assets/milkyway7.webp';
         img7.style.cssText = sharedStyle + 'opacity: 0; transition: opacity 0.01s ease;';
 
         const blackOut = document.createElement('div');
@@ -6914,7 +6914,7 @@ const FOS_CHAOS_WORDS = [
 
 function fosSpawnFloatingFace(overlay) {
     const img   = document.createElement('img');
-    img.src     = 'assets/faceofstone.png';
+    img.src     = 'assets/faceofstone.webp';
 
     const size    = 80  + Math.random() * 200;
     const angle   = Math.random() * Math.PI * 2;
@@ -6998,7 +6998,7 @@ function playFosAscendedPowerScene() {
                     // After black fades in, show the reverse Konami prompt
                     setTimeout(() => {
                         const prompt = document.createElement('img');
-                        prompt.src = 'assets/reversekonami.png';
+                        prompt.src = 'assets/reversekonami.webp';
                         prompt.style.cssText = `
                             position: absolute;
                             left: 50%; top: 50%;
@@ -7107,7 +7107,7 @@ function playFosPowerChaoticDeath() {
     function flashNebula() {
         if (nebulaEl) return;
         nebulaEl = document.createElement('img');
-        nebulaEl.src = 'assets/nebula1.png';
+        nebulaEl.src = 'assets/nebula1.webp';
         nebulaEl.style.cssText = `
             position: absolute; inset: 0;
             width: 100%; height: 100%;
@@ -7231,7 +7231,7 @@ function playFosPowerChaoticDeath() {
             // Hard cut to SMPTE bars
             t(() => {
                 const smpte = document.createElement('img');
-                smpte.src = 'assets/SMPTEbars.png';
+                smpte.src = 'assets/SMPTEbars.webp';
                 smpte.style.cssText = `
                     position: absolute; inset: 0;
                     width: 100%; height: 100%;
@@ -7314,7 +7314,7 @@ function showFosFractionCrossfade(overlay, box, prevImg, newSrc, narrativeText, 
 function showFosFractionWeighted(overlay, box, prevForestImg) {
     showFosFractionCrossfade(
         overlay, box, prevForestImg,
-        'assets/abovethetreetops2.png',
+        'assets/abovethetreetops2.webp',
         "You turn, ready to soar away, but can't. Something is weighing you down despite your buoyancy.",
         'Do you pull harder?',
         [
@@ -7327,7 +7327,7 @@ function showFosFractionWeighted(overlay, box, prevForestImg) {
 function showFosFractionLookDown(overlay, box, prevImg, narrativeText) {
     showFosFractionCrossfade(
         overlay, box, prevImg,
-        'assets/abovethetreetops3.png',
+        'assets/abovethetreetops3.webp',
         narrativeText,
         'Do you dare look down?',
         [
@@ -7340,7 +7340,7 @@ function showFosFractionLookDown(overlay, box, prevImg, narrativeText) {
 function showFosFractionGatherThoughts(overlay, box, prevImg, narrativeText) {
     showFosFractionCrossfade(
         overlay, box, prevImg,
-        'assets/abovethetreetops4.png',
+        'assets/abovethetreetops4.webp',
         narrativeText,
         'Do you gather your thoughts?',
         [
@@ -7353,7 +7353,7 @@ function showFosFractionGatherThoughts(overlay, box, prevImg, narrativeText) {
 function showFosFractionPanic(overlay, box, prevImg) {
     showFosFractionCrossfade(
         overlay, box, prevImg,
-        'assets/abovethetreetops5.png',
+        'assets/abovethetreetops5.webp',
         'You...huh...? A large crowd of something is rapidly approaching your position in the sky.',
         'What do you do?',
         [
@@ -7368,7 +7368,7 @@ function showFosFractionTaken(overlay, box, prevImg) {
 
     const takenImgZ = parseInt(prevImg.style.zIndex || 2) + 1;
     const newImg = document.createElement('img');
-    newImg.src = 'assets/abovethetreetops7.png';
+    newImg.src = 'assets/abovethetreetops7.webp';
     newImg.style.cssText = `
         position: absolute; inset: 0;
         width: 100%; height: 100%;
@@ -7403,7 +7403,7 @@ function showFosFractionTaken(overlay, box, prevImg) {
 function showFosFractionSubmit(overlay, box, prevImg) {
     showFosFractionCrossfade(
         overlay, box, prevImg,
-        'assets/abovethetreetops6.png',
+        'assets/abovethetreetops6.webp',
         'You struggle, desperately seeking a way to return to the ground before they can finally grab you.',
         '',
         [
@@ -7429,7 +7429,7 @@ function showFosFractionScene(panel) {
     setTimeout(() => {
         // Forest image fills overlay
         const forestImg = document.createElement('img');
-        forestImg.src = 'assets/abovethetreetops.png';
+        forestImg.src = 'assets/abovethetreetops.webp';
         forestImg.style.cssText = `
             position: absolute; inset: 0;
             width: 100%; height: 100%;
