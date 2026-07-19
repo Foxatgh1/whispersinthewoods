@@ -1266,3 +1266,124 @@ body.home-page {
     background: #000;
     color: #fff;
 }
+
+/* ============================================================
+   TUTORIAL OVERLAY
+   ============================================================ */
+#tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 500;
+    transition: opacity 0.3s ease;
+}
+
+#tutorial-overlay.hidden {
+    display: none;
+}
+
+#tutorial-box {
+    background: #000;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.8;
+    font-style: italic;
+    max-width: 480px;
+    padding: 32px 36px;
+    text-align: center;
+    cursor: pointer;
+    pointer-events: all;
+}
+
+#tutorial-callout-board {
+    position: absolute;
+    left: 167px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    pointer-events: all;
+    cursor: pointer;
+}
+
+#tutorial-callout-board #tutorial-box {
+    max-width: 200px;
+    font-size: 13px;
+    padding: 20px 22px;
+    margin-left: 2px;
+}
+
+#tutorial-arrow {
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.tutorial-callout-right {
+    position: absolute;
+    right: 310px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.tutorial-callout-right #tutorial-box {
+    max-width: 190px;
+    font-size: 13px;
+    padding: 20px 22px;
+}
+
+.tutorial-callout-stats {
+    position: absolute;
+    left: 310px;
+    top: calc(50% - 161px);
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.tutorial-callout-stats #tutorial-box {
+    max-width: 210px;
+    font-size: 13px;
+    padding: 20px 22px;
+}
+
+.tutorial-arrow-sm {
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.tutorial-callout-powertab {
+    position: absolute;
+    bottom: 30px;
+    left: 245px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.tutorial-callout-powertab #tutorial-box {
+    max-width: 220px;
+    font-size: 13px;
+    padding: 20px 22px;
+}
+
+.tutorial-arrow-down {
+    width: 60px;
+    flex-shrink: 0;
+}

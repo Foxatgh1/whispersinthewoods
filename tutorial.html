@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whispers in the Woods — Tutorial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="game-page">
+    <!-- SVG filter for rough ink border effect -->
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <filter id="rough-ink" x="-5%" y="-5%" width="110%" height="110%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.065" numOctaves="4" seed="8" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5"
+                                   xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+        </defs>
+    </svg>
+    <div id="game-container">
+
+        <!-- LEFT PANEL: Logo, Stats, Attributes, Items -->
+        <div id="left-panel">
+
+            <div id="logo-area">
+                <img id="game-logo" src="assets/witwlogo.webp" alt="Whispers in the Woods">
+            </div>
+
+            <div id="stats-section">
+                <div class="stat-block">
+                    <div class="stat-name">Health</div>
+                    <div class="stat-box" id="health-value">10</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-name">Peace of Mind</div>
+                    <div class="stat-box" id="pom-value">10</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-name">Knowledge</div>
+                    <div class="stat-box" id="knowledge-value">0</div>
+                </div>
+            </div>
+
+            <div class="inventory-section">
+                <div class="section-label">Attributes</div>
+                <div class="inventory-box" id="attributes-box"></div>
+            </div>
+
+            <div class="inventory-section">
+                <div class="section-label">Items</div>
+                <div class="inventory-box" id="items-box"></div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT PANEL: Board + Right Column -->
+        <div id="right-panel">
+
+            <div id="board-area">
+                <div id="leaf-display">
+                    <img class="leaf-img hidden" id="leaf-0" src="assets/watercolorleaf.webp" alt="leaf">
+                    <img class="leaf-img hidden" id="leaf-1" src="assets/watercolorleaf.webp" alt="leaf">
+                    <img class="leaf-img hidden" id="leaf-2" src="assets/watercolorleaf.webp" alt="leaf">
+                </div>
+                <svg id="board" viewBox="-210 -230 420 460" xmlns="http://www.w3.org/2000/svg">
+                    <g id="hex-layer"></g>
+                    <g id="token-layer"></g>
+                    <image id="player-token-img" href="assets/accountantglasses.webp"
+                           x="-52" y="-36" width="104" height="72"
+                           pointer-events="none"/>
+                </svg>
+                <div id="escape-container" class="hidden">
+                    <button id="escape-btn" onclick="tattemptEscape()">→ Escape the Woods</button>
+                </div>
+                <button id="power-tab" onclick="ttogglePowerCards()">
+                    ✦ Power Cards &nbsp;<span id="power-card-count">0</span>
+                </button>
+                <div id="power-cards-panel" class="hidden">
+                    <div id="power-cards-grid"></div>
+                    <div id="power-cards-empty" class="hidden">No cards in hand.</div>
+                </div>
+            </div>
+
+            <div id="right-column">
+
+                <div id="characteristics-section">
+                    <div class="section-label">Characteristics</div>
+                    <div class="char-row">
+                        <span class="char-name">Visibility</span>
+                        <span class="char-value" id="visibility-value">1.0</span>
+                    </div>
+                    <div class="char-row">
+                        <span class="char-name">Strength</span>
+                        <span class="char-value" id="strength-value">1.0</span>
+                    </div>
+                    <div class="char-row">
+                        <span class="char-name">Speed</span>
+                        <span class="char-value" id="speed-value">1.0</span>
+                    </div>
+                </div>
+
+                <div id="encounter-panel">
+                    <div id="ep-badge"></div>
+                    <div id="ep-title"></div>
+                    <div id="ep-description"></div>
+                    <div id="ep-choices"></div>
+                    <div id="ep-result" class="hidden">
+                        <div id="ep-roll"></div>
+                        <div id="ep-result-text"></div>
+                        <button id="ep-continue">Continue</button>
+                    </div>
+                    <div id="ep-idle"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Tutorial Overlay -->
+    <div id="tutorial-overlay"></div>
+
+    <script src="tutorial.js"></script>
+</body>
+</html>
