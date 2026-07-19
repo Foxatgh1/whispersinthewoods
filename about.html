@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whispers in the Woods — About</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="about-page">
+
+    <div id="about-container">
+        <img id="home-logo" src="assets/witwlogo.webp" alt="Whispers in the Woods">
+        <div id="about-text">
+            <p>It is a hot Summer evening and you have just moved from the Rockies back to your hometown in West Virginia. You are staying in your parents' old house on the edge of the Monongahela National Forest with your young dog, Max. One evening, while dozing on the porch in a rocking chair, you drift off into sleep for a few minutes. When you awake, you look down to realize that your dog...is gone. After checking the house, you realize that he must have run off into the forest, likely to chase down some squirrel or bird. You pick up a flashlight and traipse toward the treeline. However, the light is dimming fast and you don't know how far he may have gone. You need to be quick, but the trees already look unfamiliar to you.</p>
+            <p>Whispers in the Woods was originally a board game I created to play with my friends. However, after realizing that it would be easier to distribute it to folks in a digital format, I decided to port it over to the web. I wrote all of the encounters and made all of the lore on my own. I used Claude Code to write the html code and ChatGPT to build the images that you will see. I don't love AI art, but my personal artistic abilities as they pertain to watercolors are sorely lacking. If you want to help me replace the AI's art with real art, feel free to hit me up on LinkedIn where I am listed as Coleman Martinis.</p>
+        </div>
+        <button class="home-btn" id="back-btn">Back</button>
+    </div>
+
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        document.body.style.opacity = '1';
+    });
+
+    document.getElementById('back-btn').addEventListener('click', () => {
+        document.body.style.transition = 'opacity 0.5s';
+        document.body.style.opacity = '0';
+        setTimeout(() => window.location.href = 'index.html', 500);
+    });
+</script>
+</body>
+</html>

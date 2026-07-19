@@ -1221,7 +1221,20 @@ body.game-page {
     transition: opacity 0.5s ease;
 }
 
+body.about-page {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: var(--font);
+}
+
 body.home-page {
+    opacity: 0;
+    transition: opacity 0.5s ease;
     background: #ffffff;
     display: flex;
     align-items: center;
@@ -1265,6 +1278,31 @@ body.home-page {
 .home-btn:hover {
     background: #000;
     color: #fff;
+}
+
+#about-container #home-logo {
+    width: min(320px, 60vw);
+}
+
+#about-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
+    max-width: 680px;
+    width: 90vw;
+}
+
+#about-text {
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.9;
+    font-style: italic;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    text-align: center;
 }
 
 /* ============================================================

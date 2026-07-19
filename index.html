@@ -25,6 +25,10 @@
 
 
 <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        document.body.style.opacity = '1';
+    });
+
     document.getElementById('start-btn').addEventListener('click', () => {
         document.body.style.transition = 'opacity 0.5s';
         document.body.style.opacity = '0';
@@ -35,6 +39,12 @@
         document.body.style.transition = 'opacity 0.5s';
         document.body.style.opacity = '0';
         setTimeout(() => window.location.href = 'tutorial.html', 500);
+    });
+
+    document.getElementById('about-btn').addEventListener('click', () => {
+        document.body.style.transition = 'opacity 0.5s';
+        document.body.style.opacity = '0';
+        setTimeout(() => window.location.href = 'about.html', 500);
     });
 </script>
 </body>
